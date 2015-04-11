@@ -9,11 +9,12 @@ static int gQuanta = 0;
 static Thread *gCurrentThread = NULL;
 static int gTotalQuantums = 0;
 static bool threadIdsInUse[MAX_THREAD_NUM] = {false};
+vector <Thread*> blockedThreads;
 
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
 {
-	
+
 }
 
 /* Create a new thread whose entry point is f */
@@ -26,6 +27,7 @@ int uthread_spawn(void (*f)(void), Priority pr)
 int uthread_terminate(int tid)
 {
 
+	threadIdsInUse[tid] = false;
 }
 
 /* Suspend a thread */
