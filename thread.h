@@ -1,3 +1,7 @@
+#ifndef _THREAD_H
+#define _THREAD_H
+
+#include <setjmp.h>
 
 /**
 * @brief A struct to represent a user-thread
@@ -13,3 +17,5 @@ struct Thread {
 	// The processes stack
 	char stack[STACK_SIZE];
 };
+
+#endif //_THREAD_H
