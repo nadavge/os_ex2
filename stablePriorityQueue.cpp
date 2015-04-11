@@ -23,9 +23,20 @@ void StablePriorityQueue::removeThread(Thread *thread);
 
 Thread* StablePriorityQueue::getThreadById(int tid);
 {
+    for (Priority pri = RED; pri <= GREEN; pri++)
+    {
+
+		vector<Thread*> vec& = _threadQueues[pri];
+        it = find_if(vec.begin(), vec.end(), [&tid](const Thread* thread)
+					{
+						return thread.tid == tid;
+					});
+        if (it != myvector.end())
+            return thread;
+    }
+    return nullptr;
 
 }
-
 Thread* StablePriorityQueue::getTopThread();
 {
 
