@@ -8,6 +8,8 @@
 */
 struct Thread {
 	// The threads ID
+	Thread(int id, Priority pri) : tid(id), priority(pri)
+
 	int tid;
 	Priority priority;
 	// Quantums received
