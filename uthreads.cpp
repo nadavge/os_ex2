@@ -8,7 +8,7 @@
 static int gQuanta = 0;
 static Thread *gCurrentThread = NULL;
 static int gTotalQuantums = 0;
-
+static bool threadIdsInUse[MAX_THREAD_NUM] = {false};
 
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
