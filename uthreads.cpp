@@ -66,7 +66,7 @@ int uthread_get_quantums(int tid)
 	{
 		return -1;
 	}
-	return thread.quantums;
+	return thread->quantums;
 }
 
 int getMinUnusedThreadId()
