@@ -9,6 +9,9 @@
 
 #define MAIN_ID 0
 
+#define START_TIMER() setitimer(ITIMER_VIRTUAL, &gTvQuanta, nullptr)
+#define STOP_TIMER() setitimer(ITIMER_VIRTUAL, &gTvDisable, nullptr)
+
 static Thread *gCurrentThread = nullptr;
 static int gTotalQuantums = 0;
 
@@ -17,14 +20,6 @@ static int gTotalQuantums = 0;
 itimerval gTvQuanta = {0};
 // A timer interval for disabling the timer
 itimerval gTvDisable = {0};
-
-/**
-* @brief Start the timer for a thread switch
-*/
-void startTimer()
-{
-	setitimer(ITIMER_VIRTUAL, &gTvQuanta, nullptr);
-}
 
 /**
 * @brief Switch between two user threads, based on RR+ algorithm
@@ -49,7 +44,7 @@ int uthread_init(int quantum_usecs)
 	
 	gCurrentThread = Thread(MAIN_ID, ORANGE);
 	signal(SIGVTALRM, timerHandler);
-	startTimer();
+	START_TIMER();
 }
 
 /* Create a new thread whose entry point is f */
