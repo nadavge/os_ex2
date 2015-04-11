@@ -9,7 +9,7 @@ class StablePriorityQueue
 		/**
 		* @brief constructor - initializes the queue
 		**/
-		stablePriorityQueue();
+        StablePriorityQueue();
 		/**
 		* @brief adds a thread to the queue
 		* @param thread - pointer to the thread
@@ -18,15 +18,14 @@ class StablePriorityQueue
 		/**
 		* @brief removes a thread by pointer from the queue
 		* @param thread - pointer to the thread
-		* @return true on success, false if not or not found
 		**/
-		bool removeThread(Thread *thread);
+		void removeThread(Thread *thread);
 		/**
 		* @brief gets a thread by its id
 		* @param id - thread's id
 		* @return pointer to the thread
 		**/
-		Thread* getThreadById(int id);
+		Thread* getThreadById(int tid);
 		/**
 		* @brief gets the thread with the highest priority
 		* @return pointer to the thread
@@ -39,5 +38,5 @@ class StablePriorityQueue
 		**/
 		~stablePriorityQueue();
 	private:
-		vector<Thread*> threadQueues[3];
+		vector<Thread*> _threadQueues[GREEN + 1];
 };
