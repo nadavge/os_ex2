@@ -32,7 +32,9 @@ Thread* StablePriorityQueue::getThreadById(int tid);
 						return thread.tid == tid;
 					});
         if (it != myvector.end())
+		{
             return thread;
+		}
     }
     return nullptr;
 
