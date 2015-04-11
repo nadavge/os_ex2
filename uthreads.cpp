@@ -61,7 +61,12 @@ int uthread_get_total_quantums()
 /* Get the number of thread quantums */
 int uthread_get_quantums(int tid)
 {
-
+	Thread* thread = getThreadById(tid);
+	if (thread == nullptr)
+	{
+		return -1;
+	}
+	return thread.quantums;
 }
 
 int getMinUnusedThreadId()
@@ -74,6 +79,7 @@ int getMinUnusedThreadId()
 			return i;
 		}
 	}
+	return -1;
 }
 
 Thread* getThreadById(int tid)
