@@ -18,9 +18,8 @@ class StablePriorityQueue
 		/**
 		* @brief removes a thread by pointer from the queue
 		* @param thread - pointer to the thread
-		* @return true on success, false if not or not found
 		**/
-		bool removeThread(Thread *thread);
+		void removeThread(Thread *thread);
 		/**
 		* @brief gets a thread by its id
 		* @param id - thread's id
