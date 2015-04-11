@@ -82,16 +82,24 @@ int getMinUnusedThreadId()
 	return -1;
 }
 
-Thread* getThreadById(int tid)
+Thread* getThreadById(int tid, Location* loc = nullptr)
 {
 	Thread* thread = nullptr;
 	if(gCurrentThread->tid == tid)
 	{
+		if(loc != nullptr)
+		{
+			*loc = ACTIVE;
+		}
 		return gCurrentThread;
 	}
 	thread = priorityQueue.getThreadById(tid);
 	if (thread != nullptr)
 	{
+		if(loc != nullptr)
+		{
+			*loc = QUEUE;
+		}
 		return thread;
 
 	}
@@ -102,6 +110,10 @@ Thread* getThreadById(int tid)
 				});
 	if (it != blockedThreads.end())
 	{
+		if(loc != nullptr)
+		{
+			*loc = BLOCKED;
+		}
 		return it;
 	}
 	return nullptr;
