@@ -9,13 +9,6 @@ static int gQuanta = 0;
 static Thread *gCurrentThread = NULL;
 static int gTotalQuantums = 0;
 
-struct Thread {
-	int tid;
-	Priority priority;
-	address_t entry;
-	int quantums;
-	char stack[STACK_SIZE];
-};
 
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
