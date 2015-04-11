@@ -21,7 +21,10 @@ itimerval tvDisable = {0};
 */
 void switchThreads()
 {
-	
+	// TODO Stop timer
+	// TODO Save thread state
+	// TODO Check if currently returning/switching
+	// TODO Switch in case switching (Initiate timer at end)
 }
 
 /* Initialize the thread library */
