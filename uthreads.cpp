@@ -3,12 +3,26 @@
  * Author: Nadav Geva and Daniel Danon
  */
 #include <uthreads.h>
-#include "thread.h"
+#include <sys/time.h>
+#include <thread.h>
 
 static int gQuanta = 0;
 static Thread *gCurrentThread = nullptr;
 static int gTotalQuantums = 0;
 
+
+// A timer interval for a quanta
+itimerval tvQuanta = {0};
+// A timer interval for disabling the timer
+itimerval tvDisable = {0};
+
+/**
+* @brief Switch between two user threads, based on RR+ algorithm
+*/
+void switchThreads()
+{
+	
+}
 
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
