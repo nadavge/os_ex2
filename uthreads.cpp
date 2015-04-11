@@ -5,6 +5,9 @@
 #include <uthreads.h>
 
 
+static int gQuanta = 0;
+static Thread *gCurrentThread = NULL;
+static int gTotalQuantums = 0;
 
 struct Thread {
 	int tid;
