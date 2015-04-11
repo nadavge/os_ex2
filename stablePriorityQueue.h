@@ -26,7 +26,7 @@ class StablePriorityQueue
 		* @param id - thread's id
 		* @return pointer to the thread
 		**/
-		Thread* getThreadById(int id);
+		Thread* getThreadById(int tid);
 		/**
 		* @brief gets the thread with the highest priority
 		* @return pointer to the thread
