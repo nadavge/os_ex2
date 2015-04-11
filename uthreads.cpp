@@ -6,7 +6,6 @@
 #include <sys/time.h>
 #include <thread.h>
 
-static int gQuanta = 0;
 static Thread *gCurrentThread = nullptr;
 static int gTotalQuantums = 0;
 
