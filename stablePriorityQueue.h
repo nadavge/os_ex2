@@ -3,7 +3,7 @@
 #include "thread.h"
 using namespace std;
 
-class stablePriorityQueue 
+class StablePriorityQueue 
 {
 	public:
 		stablePriorityQueue();
