@@ -39,7 +39,16 @@ Thread* StablePriorityQueue::getThreadById(int tid);
 }
 Thread* StablePriorityQueue::getTopThread();
 {
+    for (Priority pri = RED; pri <= GREEN; pri++)
+    {
 
+		vector<Thread*> vec& = _threadQueues[pri];
+        if (vec.size() > 0)
+		{
+			return vec.front()
+		}
+    }
+    return nullptr;
 }
 
 
