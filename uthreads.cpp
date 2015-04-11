@@ -6,10 +6,11 @@
 
 
 static int gQuanta = 0;
-static Thread *gCurrentThread = NULL;
+static Thread *gCurrentThread = nullptr;
 static int gTotalQuantums = 0;
 static bool threadIdsInUse[MAX_THREAD_NUM] = {false};
 vector <Thread*> blockedThreads;
+StablePriorityQueue priorityQueue;
 
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
@@ -63,3 +64,27 @@ int uthread_get_quantums(int tid)
 
 }
 
+Thread* getThreadById(int tid)
+{
+	Thread* thread = nullptr;
+	if(gCurrentThread->tid == tid)
+	{
+		return gCurrentThread;
+	}
+	thread = priorityQueue.getThreadById(tid);
+	if (thread != nullptr)
+	{
+		return thread;
+
+	}
+
+	it = find_if(blockedThreads.begin(), blockedThreads.end(), [&tid](const Thread* thread)
+				{
+					return thread.tid == tid;
+				});
+	if (it != blockedThreads.end())
+	{
+		return it;
+	}
+	return nullptr;
+}
