@@ -54,7 +54,7 @@ int uthread_get_tid()
 /* Get the total number of library quantums */
 int uthread_get_total_quantums()
 {
-
+	return gTotalQuantums;
 }
 
 
