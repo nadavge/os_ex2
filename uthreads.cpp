@@ -3,10 +3,10 @@
  * Author: Nadav Geva and Daniel Danon
  */
 #include <uthreads.h>
-
+#include "thread.h"
 
 static int gQuanta = 0;
-static Thread *gCurrentThread = NULL;
+static Thread *gCurrentThread = nullptr;
 static int gTotalQuantums = 0;
 
 
@@ -60,4 +60,3 @@ int uthread_get_quantums(int tid)
 {
 
 }
-
