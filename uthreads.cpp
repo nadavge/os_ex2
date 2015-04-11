@@ -22,10 +22,10 @@ int uthread_spawn(void (*f)(void), Priority pr)
 	Thread* thread = new Thread(getMinUnusedThreadId(), pr);
 	sp = (address_t) thread->stack + STACK_SIZE - sizeof(address_t);
 	pc = (address_t) f;
-	sigsetjmp(stack->env, 1);
-	(stack->env->__jmpbuf)[JB_SP] = translate_address(sp);
-	(stack->env->__jmpbuf)[JB_PC] = translate_address(pc);
-	sigemptyset(&(stack->env)->__saved_mask);
+	sigsetjmp(thread->env, 1);
+	(thread->env->__jmpbuf)[JB_SP] = translate_address(sp);
+	(thread->env->__jmpbuf)[JB_PC] = translate_address(pc);
+	sigemptyset(&(thread->env)->__saved_mask);
 	return thread->tid;
 
 }
