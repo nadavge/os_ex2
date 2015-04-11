@@ -47,7 +47,7 @@ Thread* StablePriorityQueue::getTopThread();
 		vector<Thread*> vec& = _threadQueues[pri];
         if (vec.size() > 0)
 		{
-			return vec.front()
+			return vec.front();
 		}
     }
     return nullptr;
