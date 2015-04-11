@@ -9,7 +9,7 @@ class StablePriorityQueue
 		/**
 		* @brief constructor - initializes the queue
 		**/
-		stablePriorityQueue();
+        StablePriorityQueue();
 		/**
 		* @brief adds a thread to the queue
 		* @param thread - pointer to the thread
