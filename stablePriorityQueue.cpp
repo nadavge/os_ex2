@@ -25,7 +25,6 @@ Thread* StablePriorityQueue::getThreadById(int tid);
 {
     for (Priority pri = RED; pri <= GREEN; pri++)
     {
-
 		vector<Thread*> vec& = _threadQueues[pri];
         it = find_if(vec.begin(), vec.end(), [&tid](const Thread* thread)
 					{
@@ -43,7 +42,6 @@ Thread* StablePriorityQueue::getTopThread();
 {
     for (Priority pri = RED; pri <= GREEN; pri++)
     {
-
 		vector<Thread*> vec& = _threadQueues[pri];
         if (vec.size() > 0)
 		{

@@ -38,5 +38,5 @@ class StablePriorityQueue
 		**/
 		~stablePriorityQueue();
 	private:
-		vector<Thread*> _threadQueues[3];
+		vector<Thread*> _threadQueues[GREEN + 1];
 };
