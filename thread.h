@@ -24,6 +24,7 @@ struct Thread {
 typedef enum Location {
 	QUEUE = 0,
 	BLOCKED,
-	ACTIVE
+	ACTIVE,
+	NOT_FOUND
 }
 #endif //_THREAD_H
