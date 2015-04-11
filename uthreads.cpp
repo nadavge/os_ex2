@@ -64,6 +64,18 @@ int uthread_get_quantums(int tid)
 
 }
 
+int getMinUnusedThreadId()
+{
+	int i = 0;
+	for(i = 0; i < MAX_THREAD_NUM; i++)
+	{
+		if(! threadIdsInUse[i])
+		{
+			return i;
+		}
+	}
+}
+
 Thread* getThreadById(int tid)
 {
 	Thread* thread = nullptr;
