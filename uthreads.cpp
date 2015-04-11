@@ -34,7 +34,8 @@ int uthread_terminate(int tid)
 /* Suspend a thread */
 int uthread_suspend(int tid)
 {
-
+	Location* loc;
+	#Thread* thread = getThreadById()
 }
 
 /* Resume a thread */
