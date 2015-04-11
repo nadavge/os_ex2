@@ -30,7 +30,7 @@ void switchThreads()
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
 {
-
+	gTvQuanta.it_value.tv_usec = quantum_usecs;
 }
 
 /* Create a new thread whose entry point is f */
