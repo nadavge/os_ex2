@@ -11,8 +11,8 @@ static Thread *gThreadToTerminate = nullptr;
 static int gTotalQuantums = 0;
 static bool threadIdsInUse[MAX_THREAD_NUM] = {false};
 
-vector <Thread*> blockedThreads;
-StablePriorityQueue *priorityQueue = nullptr;
+static vector <Thread*> blockedThreads;
+static StablePriorityQueue priorityQueue;
 
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
