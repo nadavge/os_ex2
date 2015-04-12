@@ -13,11 +13,12 @@
 #define STOP_TIMER() setitimer(ITIMER_VIRTUAL, &gTvDisable, nullptr)
 
 static Thread *gCurrentThread = nullptr;
+static Thread *gThreadToTerminate = nullptr;
 static int gTotalQuantums = 0;
 static bool threadIdsInUse[MAX_THREAD_NUM] = {false};
 
-vector <Thread*> blockedThreads;
-StablePriorityQueue priorityQueue;
+static vector <Thread*> blockedThreads;
+static StablePriorityQueue priorityQueue;
 
 // A timer interval for a quanta
 itimerval gTvQuanta = {0};
