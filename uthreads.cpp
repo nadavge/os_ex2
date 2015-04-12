@@ -7,11 +7,12 @@
 
 static int gQuanta = 0;
 static Thread *gCurrentThread = nullptr;
+static Thread *gThreadToTerminate = nullptr;
 static int gTotalQuantums = 0;
 static bool threadIdsInUse[MAX_THREAD_NUM] = {false};
 
 vector <Thread*> blockedThreads;
-StablePriorityQueue priorityQueue;
+StablePriorityQueue *priorityQueue = nullptr;
 
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
