@@ -6,9 +6,12 @@
 
 
 static int gQuanta = 0;
-static Thread *gCurrentThread = NULL;
+static Thread *gCurrentThread = nullptr;
 static int gTotalQuantums = 0;
 static bool threadIdsInUse[MAX_THREAD_NUM] = {false};
+
+vector <Thread*> blockedThreads;
+StablePriorityQueue priorityQueue;
 
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
@@ -34,12 +37,14 @@ int uthread_spawn(void (*f)(void), Priority pr)
 int uthread_terminate(int tid)
 {
 
+	threadIdsInUse[tid] = false;
 }
 
 /* Suspend a thread */
 int uthread_suspend(int tid)
 {
-
+	Location* loc;
+	#Thread* thread = getThreadById()
 }
 
 /* Resume a thread */
@@ -59,13 +64,67 @@ int uthread_get_tid()
 /* Get the total number of library quantums */
 int uthread_get_total_quantums()
 {
-
+	return gTotalQuantums;
 }
 
 
 /* Get the number of thread quantums */
 int uthread_get_quantums(int tid)
 {
-
+	Thread* thread = getThreadById(tid);
+	if (thread == nullptr)
+	{
+		return -1;
+	}
+	return thread->quantums;
 }
 
+int getMinUnusedThreadId()
+{
+	int i = 0;
+	for(i = 0; i < MAX_THREAD_NUM; i++)
+	{
+		if(! threadIdsInUse[i])
+		{
+			return i;
+		}
+	}
+	return -1;
+}
+
+Thread* getThreadById(int tid, Location* loc = nullptr)
+{
+	Thread* thread = nullptr;
+	if(gCurrentThread->tid == tid)
+	{
+		if(loc != nullptr)
+		{
+			*loc = ACTIVE;
+		}
+		return gCurrentThread;
+	}
+	thread = priorityQueue.getThreadById(tid);
+	if (thread != nullptr)
+	{
+		if(loc != nullptr)
+		{
+			*loc = QUEUE;
+		}
+		return thread;
+
+	}
+
+	it = find_if(blockedThreads.begin(), blockedThreads.end(), [&tid](const Thread* thread)
+				{
+					return thread.tid == tid;
+				});
+	if (it != blockedThreads.end())
+	{
+		if(loc != nullptr)
+		{
+			*loc = BLOCKED;
+		}
+		return it;
+	}
+	return nullptr;
+}
