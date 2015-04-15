@@ -185,14 +185,16 @@ void timerHandler(int sig)
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
 {
-	blockSignals();
 	gTvQuanta.it_value.tv_usec = quantum_usecs;
 	// TODO Add to running structure
 	gCurrentThread = new Thread(MAIN_ID, ORANGE);
 	threadIdsInUse[0] = true;
 	signal(SIGVTALRM, timerHandler);
-	START_TIMER();
-	unBlockSignals();
+	if (START_TIMER() == ERROR)
+	{
+		cerr << SYSTEM_ERROR TIMER_ERROR;
+		exit(1);
+	}
 }
 
 /* Create a new thread whose entry point is f */
