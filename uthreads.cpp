@@ -27,6 +27,8 @@ using namespace std;
 #define START_TIMER() setitimer(ITIMER_VIRTUAL, &gTvQuanta, nullptr)
 #define STOP_TIMER() setitimer(ITIMER_VIRTUAL, &gTvDisable, nullptr)
 
+#define DEBUG(msg) cout << msg << endl
+
 enum JumpType
 {
 	/*
@@ -122,7 +124,7 @@ void switchThreads(SwitchAction action)
 	{
 		goto error;
 	}
-
+	DEBUG("Starting");
 	++gTotalQuantums;
 	++gCurrentThread->quantums;
 
@@ -130,6 +132,7 @@ void switchThreads(SwitchAction action)
 	// If returning to run current thread, simply end switch method
 	if (jumpType == RETURN)
 	{
+		DEBUG("Entered RETURN");
 		// Check if got here from a suiciding thread, if so destroy it
 		if (gThreadToTerminate != nullptr)
 		{
@@ -143,8 +146,10 @@ void switchThreads(SwitchAction action)
 	// TODO implement pop
 	newThread = priorityQueue.getTopThread();
 	// If there exists a thread to switch to
+	DEBUG("Getting top thread");
 	if (newThread != nullptr)
 	{
+		DEBUG("Found new thread");
 		// TODO Maybe implement as queue to be more efficient
 		priorityQueue.removeThread(newThread);
 		if (action == TERMINATE)
@@ -153,6 +158,7 @@ void switchThreads(SwitchAction action)
 		}
 		else if (action == DEF_SWITCH)
 		{
+			DEBUG("Default action");
 			priorityQueue.addThread(gCurrentThread);
 		}
 
@@ -160,6 +166,7 @@ void switchThreads(SwitchAction action)
 	}
 	else
 	{
+		DEBUG("Its nullptr");
 		// In that case we want to stay the active thread, unless we terminated ourselves
 		if (action == TERMINATE)
 		{
@@ -170,9 +177,10 @@ void switchThreads(SwitchAction action)
 
 	if (START_TIMER() == ERROR)
 	{
+		DEBUG("Goto ERROR");
 		goto error;
 	}
-
+	DEBUG("Finished, jumping");
 	siglongjmp(gCurrentThread->env, RETURN);
 
 error:
@@ -212,6 +220,7 @@ int uthread_spawn(void (*f)(void), Priority pr)
 	(thread->env->__jmpbuf)[JB_SP] = translate_address(sp);
 	(thread->env->__jmpbuf)[JB_PC] = translate_address(pc);
 	sigemptyset(&(thread->env)->__saved_mask);
+	priorityQueue.addThread(thread);
 	unBlockSignals();
 	return thread->tid;
 
