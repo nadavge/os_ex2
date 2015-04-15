@@ -34,8 +34,26 @@ int uthread_terminate(int tid)
 /* Suspend a thread */
 int uthread_suspend(int tid)
 {
-	Location* loc;
-	#Thread* thread = getThreadById()
+	Location* loc = nullptr;
+	Thread* thread = nullptr;
+	if(tid <= 0)
+	{
+		return ERROR;
+	}
+	Thread* thread = getThreadById(tid, loc);
+	if(thread == nullptr)
+	{
+		return ERROR;
+	}
+	switch(*loc)
+	{
+	case BLOCKED:
+		return 1;
+		break;
+	case QUEUE:
+		priorityQueue.
+
+	}
 }
 
 /* Resume a thread */
