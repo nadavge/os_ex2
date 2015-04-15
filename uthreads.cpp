@@ -69,6 +69,8 @@ void timerHandler(int sig)
 	switchThreads();
 }
 
+static Thread* retainedThread = nullptr;
+static Location changeMainThread = NOT_FOUND;
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
 {
@@ -96,15 +98,63 @@ int uthread_spawn(void (*f)(void), Priority pr)
 /* Terminate a thread */
 int uthread_terminate(int tid)
 {
-
+	if(tid == 0)
+	{
+		exit(0);
+	}
+	if(tid < 0)
+	{
+		return ERROR;
+	}
+	Thread* thread = getThreadById(tid, loc);
+	if(thread == nullptr)
+	{
+		return ERROR;
+	}
 	threadIdsInUse[tid] = false;
+	switch(*loc)
+	{
+	case BLOCKED:
+		blockedThreads.removeThread(thread);
+		break;
+	case QUEUE:
+		priorityQueue.removeThread(thread);
+		break;
+	case ACTIVE:
+		// TODO handle thread active
+		break;
+
+	}
 }
 
 /* Suspend a thread */
 int uthread_suspend(int tid)
 {
-	Location* loc;
-	#Thread* thread = getThreadById()
+	Location* loc = nullptr;
+	Thread* thread = nullptr;
+	if(tid <= 0)
+	{
+		return ERROR;
+	}
+	Thread* thread = getThreadById(tid, loc);
+	if(thread == nullptr)
+	{
+		return ERROR;
+	}
+	switch(*loc)
+	{
+	case BLOCKED:
+		break;
+	case QUEUE:
+		priorityQueue.removeThread(thread);
+		blockedThread.insert(thread);
+		break;
+	case ACTIVE:
+		// TODO handle thread active
+		break;
+
+	}
+	return 0;
 }
 
 /* Resume a thread */
