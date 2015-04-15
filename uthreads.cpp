@@ -155,6 +155,8 @@ void switchThreads(SwitchAction action)
 		{
 			priorityQueue.addThread(gCurrentThread);
 		}
+
+		gCurrentThread = newThread;
 	}
 	else
 	{
