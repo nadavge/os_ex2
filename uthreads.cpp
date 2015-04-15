@@ -104,6 +104,9 @@ const itimerval gTvDisable = {0};
 Thread* getThreadById(int tid, Location* loc);
 int getMinUnusedThreadId();
 void switchThreads(SwitchAction action=DEF_SWITCH);
+int blockSignals();
+int unBlockSignals();
+void removeFromBlocked(Thread* thread);
 
 //================================IMPLEMENTATION=======================
 
@@ -193,7 +196,7 @@ int uthread_init(int quantum_usecs)
 int uthread_spawn(void (*f)(void), Priority pr)
 {
 	address_t sp, pc;
-	blockSignals()
+	blockSignals();
 	Thread* thread = new Thread(getMinUnusedThreadId(), pr);
 	threadIdsInUse[thread->tid] = true;
 	sp = (address_t) thread->stack + STACK_SIZE - sizeof(address_t);
@@ -211,8 +214,8 @@ int blockSignals()
 {
 	sigset_t signal_set;
 	sigemptyset(&signal_set);
-	sigaddset (&mask, SIGINT);
-	if (sigprocmask(SIG_BLOCK, &mask, NULL) < 0) {
+	sigaddset (&signal_set, SIGINT);
+	if (sigprocmask(SIG_BLOCK, &signal_set, NULL) < 0) {
 		return -1;
 	}
 
@@ -222,8 +225,8 @@ int unBlockSignals()
 {
 	sigset_t signal_set;
 	sigemptyset(&signal_set);
-	sigaddset (&mask, SIGINT);
-	if (sigprocmask(SIG_UNBLOCK, &mask, NULL) < 0) {
+	sigaddset (&signal_set, SIGINT);
+	if (sigprocmask(SIG_UNBLOCK, &signal_set, NULL) < 0) {
 		return -1;
 	}
 
