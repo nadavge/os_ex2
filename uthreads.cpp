@@ -52,7 +52,7 @@ int uthread_init(int quantum_usecs)
 {
 	gTvQuanta.it_value.tv_usec = quantum_usecs;
 	// TODO Add to running structure
-	gCurrentThread = Thread(MAIN_ID, ORANGE);
+	gCurrentThread = new Thread(MAIN_ID, ORANGE);
 	signal(SIGVTALRM, timerHandler);
 	START_TIMER();
 }
