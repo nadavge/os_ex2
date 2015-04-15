@@ -12,6 +12,7 @@
 #include <thread.h>
 #include <vector>
 #include <algorithm>
+#include <iostream>
 
 using namespace std;
 
@@ -19,6 +20,9 @@ using namespace std;
 
 #define MAIN_ID 0
 #define ERROR -1
+
+#define SYSTEM_ERROR "system error: "
+#define TIMER_ERROR "Setting timer failed\n"
 
 #define START_TIMER() setitimer(ITIMER_VIRTUAL, &gTvQuanta, nullptr)
 #define STOP_TIMER() setitimer(ITIMER_VIRTUAL, &gTvDisable, nullptr)
@@ -33,7 +37,6 @@ enum JumpType
 	RETURN
 };
 
-// TODO remove suspend
 enum SwitchAction
 {
 	DEF_SWITCH,
@@ -101,8 +104,6 @@ const itimerval gTvDisable = {0};
 Thread* getThreadById(int tid, Location* loc=nullptr);
 int getMinUnusedThreadId();
 void switchThreads(SwitchAction action=DEF_SWITCH);
-//TODO implement
-void killProcess();
 
 //================================IMPLEMENTATION=======================
 
@@ -111,9 +112,15 @@ void killProcess();
 */
 void switchThreads(SwitchAction action)
 {
-	// TODO Handle timer error
-	STOP_TIMER();
-	int jumpType = sigsetjmp(gCurrentThread->env,1);
+	int jumpType = 0;
+	Thread* newThread = nullptr;
+
+	if (STOP_TIMER() == ERROR)
+	{
+		goto error;
+	}
+
+	jumpType = sigsetjmp(gCurrentThread->env,1);
 	// If returning to run current thread, simply end switch method
 	if (jumpType == RETURN)
 	{
@@ -124,44 +131,44 @@ void switchThreads(SwitchAction action)
 			gThreadToTerminate = nullptr;
 		}
 
-		// TODO Handle error timer and change its place
-		START_TIMER();
 		return;
 	}
 
-	Thread* newThread = nullptr;
-
-	// TODO maybe later remove SUSPEND option because just like DEF_SWITCH
-	if (true) //(action == DEF_SWITCH || action == SUSPEND)
+	// TODO implement pop
+	newThread = priorityQueue.getTopThread();
+	// If there exists a thread to switch to
+	if (newThread != nullptr)
 	{
-		newThread = priorityQueue.getTopThread();
-		// If there exists a thread to switch to
-		if (newThread != nullptr)
+		// TODO Maybe implement as queue to be more efficient
+		priorityQueue.removeThread(newThread);
+		if (action == TERMINATE)
 		{
-			// TODO Maybe implement as queue to be more efficient
-			priorityQueue.removeThread(newThread);
-			if (action == TERMINATE)
-			{
-				gThreadToTerminate = gCurrentThread;
-			}
-			else
-			{
-				priorityQueue.addThread(gCurrentThread);
-			}
+			gThreadToTerminate = gCurrentThread;
 		}
-		else
+		else if (action == DEF_SWITCH)
 		{
-			if (action == TERMINATE)
-			{
-				// TODO find a way to handle a case of no available replacement on suicide
-				// Maybe take control over the main thread with editing pc to be the kill process
-			}
+			priorityQueue.addThread(gCurrentThread);
+		}
+	}
+	else
+	{
+		// In that case we want to stay the active thread, unless we terminated ourselves
+		if (action == TERMINATE)
+		{
+			// TODO find a way to handle a case of no available replacement on suicide
+			// Maybe take control over the main thread with editing pc to be the kill process
 		}
 	}
 
-	// TODO handle errors
-	START_TIMER();
+	if (START_TIMER() == ERROR)
+	{
+		goto error;
+	}
+
 	siglongjmp(gCurrentThread->env, RETURN);
+
+error:
+	cerr << SYSTEM_ERROR TIMER_ERROR;
 }
 
 void timerHandler(int sig)
