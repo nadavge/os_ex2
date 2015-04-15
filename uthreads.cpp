@@ -33,6 +33,7 @@ enum JumpType
 	RETURN
 };
 
+// TODO remove suspend
 enum SwitchAction
 {
 	DEF_SWITCH,
@@ -99,13 +100,16 @@ const itimerval gTvDisable = {0};
 
 Thread* getThreadById(int tid, Location* loc=nullptr);
 int getMinUnusedThreadId();
+void switchThreads(SwitchAction action=DEF_SWITCH);
+//TODO implement
+void killProcess();
 
 //================================IMPLEMENTATION=======================
 
 /**
 * @brief Switch between two user threads, based on RR+ algorithm
 */
-void switchThreads(SwitchAction action=DEF_SWITCH)
+void switchThreads(SwitchAction action)
 {
 	// TODO Handle timer error
 	STOP_TIMER();
@@ -125,22 +129,39 @@ void switchThreads(SwitchAction action=DEF_SWITCH)
 		return;
 	}
 
-	// If currently switching a thread
-	if (action == TERMINATE)
+	Thread* newThread = nullptr;
+
+	// TODO maybe later remove SUSPEND option because just like DEF_SWITCH
+	if (true) //(action == DEF_SWITCH || action == SUSPEND)
 	{
-		// TODO Implement termination
-	}
-	else if (action == SUSPEND)
-	{
-		// TODO implement suspension
-	}
-	else
-	{
-		// TODO implement default switching
+		newThread = priorityQueue.getTopThread();
+		// If there exists a thread to switch to
+		if (newThread != nullptr)
+		{
+			// TODO Maybe implement as queue to be more efficient
+			priorityQueue.removeThread(newThread);
+			if (action == TERMINATE)
+			{
+				gThreadToTerminate = gCurrentThread;
+			}
+			else
+			{
+				priorityQueue.addThread(gCurrentThread);
+			}
+		}
+		else
+		{
+			if (action == TERMINATE)
+			{
+				// TODO find a way to handle a case of no available replacement on suicide
+				// Maybe take control over the main thread with editing pc to be the kill process
+			}
+		}
 	}
 
-	// TODO Pull the next thread (first pull, if no next thread don't switch)
-	// TODO Perform a jump
+	// TODO handle errors
+	START_TIMER();
+	siglongjmp(gCurrentThread->env, RETURN);
 }
 
 void timerHandler(int sig)
