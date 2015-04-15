@@ -27,7 +27,7 @@ using namespace std;
 #define START_TIMER() setitimer(ITIMER_VIRTUAL, &gTvQuanta, nullptr)
 #define STOP_TIMER() setitimer(ITIMER_VIRTUAL, &gTvDisable, nullptr)
 
-#define DEBUG(msg) cout << msg << endl
+#define DEBUG(msg) cout << "\t\t" << msg << endl
 
 enum JumpType
 {
@@ -103,7 +103,7 @@ const itimerval gTvDisable = {0};
 
 //================================DECLARATIONS=========================
 
-Thread* getThreadById(int tid, Location* loc);
+Thread* getThreadById(int tid, Location& loc);
 int getMinUnusedThreadId();
 void switchThreads(SwitchAction action=DEF_SWITCH);
 int blockSignals();
@@ -161,6 +161,11 @@ void switchThreads(SwitchAction action)
 			DEBUG("Default action");
 			priorityQueue.addThread(gCurrentThread);
 		}
+		else if (action == SUSPEND)
+		{
+			DEBUG("Suspend action");
+			blockedThreads.push_back(gCurrentThread);
+		}
 
 		gCurrentThread = newThread;
 	}
@@ -184,6 +189,7 @@ void switchThreads(SwitchAction action)
 	siglongjmp(gCurrentThread->env, RETURN);
 
 error:
+	DEBUG("################# ERROR ####################");
 	cerr << SYSTEM_ERROR TIMER_ERROR;
 }
 
@@ -263,7 +269,7 @@ int uthread_terminate(int tid)
 		unBlockSignals();
 		return ERROR;
 	}
-	Location* loc = nullptr;
+	Location loc = NOT_FOUND;
 
 	Thread* thread = getThreadById(tid, loc);
 	if(thread == nullptr)
@@ -272,7 +278,7 @@ int uthread_terminate(int tid)
 		return ERROR;
 	}
 	threadIdsInUse[tid] = false;
-	switch(*loc)
+	switch(loc)
 	{
 	case BLOCKED:
 		removeFromBlocked(thread);
@@ -292,32 +298,38 @@ int uthread_terminate(int tid)
 int uthread_suspend(int tid)
 {
 	blockSignals();
-	Location* loc = nullptr;
+	DEBUG("Entering suspend");
+	Location loc = NOT_FOUND;
 	Thread* thread = nullptr;
 	if(tid <= 0)
 	{
 		unBlockSignals();
 		return ERROR;
 	}
+	DEBUG("Getting thread by ID");
 	thread = getThreadById(tid, loc);
 	if(thread == nullptr)
 	{
+		DEBUG("nullptr");
 		unBlockSignals();
 		return ERROR;
 	}
-	switch(*loc)
+	DEBUG("Not nullptr");
+	switch(loc)
 	{
 	case BLOCKED:
 		break;
 	case QUEUE:
+		DEBUG("Queue");
 		priorityQueue.removeThread(thread);
 		blockedThreads.push_back(thread);
 		break;
 	case ACTIVE:
+		DEBUG("Active");
 		switchThreads(SUSPEND);
 		break;
-
 	}
+	DEBUG("Finished");
 	unBlockSignals();
 	return 0;
 }
@@ -326,14 +338,14 @@ int uthread_suspend(int tid)
 int uthread_resume(int tid)
 {
 	blockSignals();
-	Location* loc = nullptr;
+	Location loc = NOT_FOUND;
 	Thread* thread = getThreadById(tid, loc);
 	if (thread == nullptr)
 	{
 		unBlockSignals();
 		return -1;
 	}
-	switch(*loc)
+	switch(loc)
 	{
 	case BLOCKED:
 		removeFromBlocked(thread);
@@ -365,7 +377,7 @@ int uthread_get_total_quantums()
 int uthread_get_quantums(int tid)
 {
 	blockSignals();
-	Location* loc = nullptr;
+	Location loc = NOT_FOUND;
 
 	Thread* thread = getThreadById(tid, loc);
 	if (thread == nullptr)
@@ -397,24 +409,19 @@ void removeFromBlocked(Thread* thread)
     blockedThreads.erase(std::remove(blockedThreads.begin(), blockedThreads.end(), thread), blockedThreads.end());
 }
 
-Thread* getThreadById(int tid, Location* loc)
+Thread* getThreadById(int tid, Location& loc)
 {
 	Thread* thread = nullptr;
+	DEBUG("Starting getThreadById");
 	if(gCurrentThread->tid == tid)
 	{
-		if(loc != nullptr)
-		{
-			*loc = ACTIVE;
-		}
+		loc = ACTIVE;
 		return gCurrentThread;
 	}
 	thread = priorityQueue.getThreadById(tid);
 	if (thread != nullptr)
 	{
-		if(loc != nullptr)
-		{
-			*loc = QUEUE;
-		}
+		loc = QUEUE;
 		return thread;
 
 	}
@@ -426,10 +433,7 @@ Thread* getThreadById(int tid, Location* loc)
 				});
 	if (it != blockedThreads.end())
 	{
-		if(loc != nullptr)
-		{
-			*loc = BLOCKED;
-		}
+		loc = BLOCKED;
 		return *it;
 	}
 	return nullptr;
