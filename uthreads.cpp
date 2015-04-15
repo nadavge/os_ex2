@@ -12,6 +12,7 @@
 #include <thread.h>
 #include <vector>
 #include <algorithm>
+#include <iostream>
 
 using namespace std;
 
@@ -19,6 +20,9 @@ using namespace std;
 
 #define MAIN_ID 0
 #define ERROR -1
+
+#define SYSTEM_ERROR "system error: "
+#define TIMER_ERROR "Setting timer failed\n"
 
 #define START_TIMER() setitimer(ITIMER_VIRTUAL, &gTvQuanta, nullptr)
 #define STOP_TIMER() setitimer(ITIMER_VIRTUAL, &gTvDisable, nullptr)
@@ -99,17 +103,24 @@ const itimerval gTvDisable = {0};
 
 Thread* getThreadById(int tid, Location* loc=nullptr);
 int getMinUnusedThreadId();
+void switchThreads(SwitchAction action=DEF_SWITCH);
 
 //================================IMPLEMENTATION=======================
 
 /**
 * @brief Switch between two user threads, based on RR+ algorithm
 */
-void switchThreads(SwitchAction action=DEF_SWITCH)
+void switchThreads(SwitchAction action)
 {
-	// TODO Handle timer error
-	STOP_TIMER();
-	int jumpType = sigsetjmp(gCurrentThread->env,1);
+	int jumpType = 0;
+	Thread* newThread = nullptr;
+
+	if (STOP_TIMER() == ERROR)
+	{
+		goto error;
+	}
+
+	jumpType = sigsetjmp(gCurrentThread->env,1);
 	// If returning to run current thread, simply end switch method
 	if (jumpType == RETURN)
 	{
@@ -117,14 +128,47 @@ void switchThreads(SwitchAction action=DEF_SWITCH)
 		if (gThreadToTerminate != nullptr)
 		{
 			delete gThreadToTerminate;
+			gThreadToTerminate = nullptr;
 		}
 
-		// TODO Handle error timer
-		START_TIMER();
 		return;
 	}
 
-	// TODO Switch in case switching (Initiate timer at end)
+	// TODO implement pop
+	newThread = priorityQueue.getTopThread();
+	// If there exists a thread to switch to
+	if (newThread != nullptr)
+	{
+		// TODO Maybe implement as queue to be more efficient
+		priorityQueue.removeThread(newThread);
+		if (action == TERMINATE)
+		{
+			gThreadToTerminate = gCurrentThread;
+		}
+		else if (action == DEF_SWITCH)
+		{
+			priorityQueue.addThread(gCurrentThread);
+		}
+	}
+	else
+	{
+		// In that case we want to stay the active thread, unless we terminated ourselves
+		if (action == TERMINATE)
+		{
+			// TODO find a way to handle a case of no available replacement on suicide
+			// Maybe take control over the main thread with editing pc to be the kill process
+		}
+	}
+
+	if (START_TIMER() == ERROR)
+	{
+		goto error;
+	}
+
+	siglongjmp(gCurrentThread->env, RETURN);
+
+error:
+	cerr << SYSTEM_ERROR TIMER_ERROR;
 }
 
 void timerHandler(int sig)
