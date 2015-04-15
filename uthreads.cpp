@@ -3,9 +3,29 @@
  * Author: Nadav Geva and Daniel Danon
  */
 #include <uthreads.h>
+#include <stablePriorityQueue.h>
+#include <sys/time.h>
+#include <signal.h>
+#include <thread.h>
+#include <vector>
 
+using namespace std;
 
-static int gQuanta = 0;
+#define MAIN_ID 0
+
+#define START_TIMER() setitimer(ITIMER_VIRTUAL, &gTvQuanta, nullptr)
+#define STOP_TIMER() setitimer(ITIMER_VIRTUAL, &gTvDisable, nullptr)
+
+enum JumpType
+{
+	/*
+	 * SWITCHING should be first, to act by the spec of sigsetjmp
+	 * since sigsetjmp returns 0 on first call
+	 */ 
+	SWITCHING,
+	RETURN
+};
+
 static Thread *gCurrentThread = nullptr;
 static Thread *gThreadToTerminate = nullptr;
 static int gTotalQuantums = 0;
@@ -14,10 +34,49 @@ static bool threadIdsInUse[MAX_THREAD_NUM] = {false};
 static vector <Thread*> blockedThreads;
 static StablePriorityQueue priorityQueue;
 
+// A timer interval for a quanta
+itimerval gTvQuanta = {0};
+// A timer interval for disabling the timer
+itimerval gTvDisable = {0};
+
+/**
+* @brief Switch between two user threads, based on RR+ algorithm
+*/
+void switchThreads()
+{
+	// TODO Handle timer error
+	STOP_TIMER();
+	int jumpType = sigsetjmp(gCurrentThread->env,1);
+	// If returning to run current thread, simply end switch method
+	if (jumpType == RETURN)
+	{
+		// Check if got here from a suiciding thread, if so destroy it
+		if (gThreadToTerminate != nullptr)
+		{
+			delete gThreadToTerminate;
+		}
+
+		// TODO Handle error timer
+		START_TIMER();
+		return;
+	}
+
+	// TODO Switch in case switching (Initiate timer at end)
+}
+
+void timerHandler(int sig)
+{
+	switchThreads();
+}
+
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
 {
-
+	gTvQuanta.it_value.tv_usec = quantum_usecs;
+	// TODO Add to running structure
+	gCurrentThread = new Thread(MAIN_ID, ORANGE);
+	signal(SIGVTALRM, timerHandler);
+	START_TIMER();
 }
 
 /* Create a new thread whose entry point is f */

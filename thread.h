@@ -7,9 +7,10 @@
 * @brief A struct to represent a user-thread
 */
 struct Thread {
-	// The threads ID
+	// Constructor for thread
 	Thread(int id, Priority pri) : tid(id), priority(pri)
 
+	// The threads ID
 	int tid;
 	Priority priority;
 	// Quantums received
@@ -20,11 +21,11 @@ struct Thread {
 	char stack[STACK_SIZE];
 };
 
-
 typedef enum Location {
 	QUEUE = 0,
 	BLOCKED,
 	ACTIVE,
 	NOT_FOUND
 }
+
 #endif //_THREAD_H
