@@ -21,11 +21,11 @@ struct Thread {
 	char stack[STACK_SIZE];
 };
 
-typedef enum Location {
+enum Location {
 	QUEUE = 0,
 	BLOCKED,
 	ACTIVE,
 	NOT_FOUND
-}
+};
 
 #endif //_THREAD_H

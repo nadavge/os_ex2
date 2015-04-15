@@ -1,6 +1,10 @@
+#ifndef _STABLEPRIORITYQUEUE_H
+#define _STABLEPRIORITYQUEUE_H
+
 #include <vector>
-#include "uthreads.h"
 #include "thread.h"
+#include "uthreads.h"
+
 using namespace std;
 
 class StablePriorityQueue
@@ -36,7 +40,9 @@ class StablePriorityQueue
 		/**
 		* @brief destructor - frees everything that's needed
 		**/
-		~stablePriorityQueue();
+		~StablePriorityQueue();
 	private:
 		vector<Thread*> _threadQueues[GREEN + 1];
 };
+
+#endif //_STABLEPRIORITYQUEUE_H
