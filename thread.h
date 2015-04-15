@@ -8,7 +8,7 @@
 */
 struct Thread {
 	// Constructor for thread
-	Thread(int id, Priority pri) : tid(id), priority(pri);
+	Thread(int id, Priority pri) : tid(id), priority(pri) {}
 
 	// The threads ID
 	int tid;

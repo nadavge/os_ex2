@@ -2,16 +2,23 @@
  * User-Level Threads Library (uthreads)
  * Author: Nadav Geva and Daniel Danon
  */
+
+//================================INCLUDES=============================
+
 #include <uthreads.h>
 #include <stablePriorityQueue.h>
 #include <sys/time.h>
 #include <signal.h>
 #include <thread.h>
 #include <vector>
+#include <algorithm>
 
 using namespace std;
 
+//================================DEFINITIONS==========================
+
 #define MAIN_ID 0
+#define ERROR -1
 
 #define START_TIMER() setitimer(ITIMER_VIRTUAL, &gTvQuanta, nullptr)
 #define STOP_TIMER() setitimer(ITIMER_VIRTUAL, &gTvDisable, nullptr)
@@ -26,6 +33,55 @@ enum JumpType
 	RETURN
 };
 
+enum SwitchAction
+{
+	DEF_SWITCH,
+	SUSPEND,
+	TERMINATE
+};
+
+#ifdef __x86_64__
+/* code for 64 bit Intel arch */
+
+typedef unsigned long address_t;
+#define JB_SP 6
+#define JB_PC 7
+
+/* A translation is required when using an address of a variable.
+   Use this as a black box in your code. */
+address_t translate_address(address_t addr)
+{
+    address_t ret;
+    asm volatile("xor    %%fs:0x30,%0\n"
+		"rol    $0x11,%0\n"
+                 : "=g" (ret)
+                 : "0" (addr));
+    return ret;
+}
+
+#else
+/* code for 32 bit Intel arch */
+
+typedef unsigned int address_t;
+#define JB_SP 4
+#define JB_PC 5 
+
+/* A translation is required when using an address of a variable.
+   Use this as a black box in your code. */
+address_t translate_address(address_t addr)
+{
+    address_t ret;
+    asm volatile("xor    %%gs:0x18,%0\n"
+		"rol    $0x9,%0\n"
+                 : "=g" (ret)
+                 : "0" (addr));
+    return ret;
+}
+
+#endif
+
+//================================GLOBALS==============================
+
 static Thread *gCurrentThread = nullptr;
 static Thread *gThreadToTerminate = nullptr;
 static int gTotalQuantums = 0;
@@ -37,12 +93,19 @@ static StablePriorityQueue priorityQueue;
 // A timer interval for a quanta
 itimerval gTvQuanta = {0};
 // A timer interval for disabling the timer
-itimerval gTvDisable = {0};
+const itimerval gTvDisable = {0};
+
+//================================DECLARATIONS=========================
+
+Thread* getThreadById(int tid, Location* loc=nullptr);
+int getMinUnusedThreadId();
+
+//================================IMPLEMENTATION=======================
 
 /**
 * @brief Switch between two user threads, based on RR+ algorithm
 */
-void switchThreads()
+void switchThreads(SwitchAction action=DEF_SWITCH)
 {
 	// TODO Handle timer error
 	STOP_TIMER();
@@ -69,8 +132,6 @@ void timerHandler(int sig)
 	switchThreads();
 }
 
-static Thread* retainedThread = nullptr;
-static Location changeMainThread = NOT_FOUND;
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
 {
@@ -84,6 +145,8 @@ int uthread_init(int quantum_usecs)
 /* Create a new thread whose entry point is f */
 int uthread_spawn(void (*f)(void), Priority pr)
 {
+	address_t sp, pc;
+
 	Thread* thread = new Thread(getMinUnusedThreadId(), pr);
 	sp = (address_t) thread->stack + STACK_SIZE - sizeof(address_t);
 	pc = (address_t) f;
@@ -106,6 +169,8 @@ int uthread_terminate(int tid)
 	{
 		return ERROR;
 	}
+	Location* loc = nullptr;
+
 	Thread* thread = getThreadById(tid, loc);
 	if(thread == nullptr)
 	{
@@ -115,6 +180,7 @@ int uthread_terminate(int tid)
 	switch(*loc)
 	{
 	case BLOCKED:
+		//TODO change to vector remove
 		blockedThreads.removeThread(thread);
 		break;
 	case QUEUE:
@@ -136,7 +202,7 @@ int uthread_suspend(int tid)
 	{
 		return ERROR;
 	}
-	Thread* thread = getThreadById(tid, loc);
+	thread = getThreadById(tid, loc);
 	if(thread == nullptr)
 	{
 		return ERROR;
@@ -147,7 +213,7 @@ int uthread_suspend(int tid)
 		break;
 	case QUEUE:
 		priorityQueue.removeThread(thread);
-		blockedThread.insert(thread);
+		blockedThreads.push_back(thread);
 		break;
 	case ACTIVE:
 		// TODO handle thread active
@@ -202,7 +268,7 @@ int getMinUnusedThreadId()
 	return -1;
 }
 
-Thread* getThreadById(int tid, Location* loc = nullptr)
+Thread* getThreadById(int tid, Location* loc)
 {
 	Thread* thread = nullptr;
 	if(gCurrentThread->tid == tid)
@@ -224,9 +290,10 @@ Thread* getThreadById(int tid, Location* loc = nullptr)
 
 	}
 
-	it = find_if(blockedThreads.begin(), blockedThreads.end(), [&tid](const Thread* thread)
+	auto it = find_if(blockedThreads.begin(), blockedThreads.end(), 
+			  [&tid](const Thread* thread)
 				{
-					return thread.tid == tid;
+					return thread->tid == tid;
 				});
 	if (it != blockedThreads.end())
 	{
@@ -234,7 +301,7 @@ Thread* getThreadById(int tid, Location* loc = nullptr)
 		{
 			*loc = BLOCKED;
 		}
-		return it;
+		return *it;
 	}
 	return nullptr;
 }
