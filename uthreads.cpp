@@ -28,7 +28,7 @@ enum JumpType
 	/*
 	 * SWITCHING should be first, to act by the spec of sigsetjmp
 	 * since sigsetjmp returns 0 on first call
-	 */ 
+	 */
 	SWITCHING,
 	RETURN
 };
@@ -64,7 +64,7 @@ address_t translate_address(address_t addr)
 
 typedef unsigned int address_t;
 #define JB_SP 4
-#define JB_PC 5 
+#define JB_PC 5
 
 /* A translation is required when using an address of a variable.
    Use this as a black box in your code. */
@@ -97,7 +97,7 @@ const itimerval gTvDisable = {0};
 
 //================================DECLARATIONS=========================
 
-Thread* getThreadById(int tid, Location* loc=nullptr);
+Thread* getThreadById(int tid, Location* loc);
 int getMinUnusedThreadId();
 
 //================================IMPLEMENTATION=======================
@@ -226,14 +226,19 @@ int uthread_suspend(int tid)
 /* Resume a thread */
 int uthread_resume(int tid)
 {
-
+	Location* loc = nullptr;
+	Thread* thread = getThreadById(tid, loc);
+	if (thread == nullptr)
+	{
+		return -1;
+	}
 }
 
 
 /* Get the id of the calling thread */
 int uthread_get_tid()
 {
-
+	return gCurrentThread->tid;
 }
 
 
@@ -247,7 +252,9 @@ int uthread_get_total_quantums()
 /* Get the number of thread quantums */
 int uthread_get_quantums(int tid)
 {
-	Thread* thread = getThreadById(tid);
+	Location* loc = nullptr;
+
+	Thread* thread = getThreadById(tid, loc);
 	if (thread == nullptr)
 	{
 		return -1;
@@ -290,7 +297,7 @@ Thread* getThreadById(int tid, Location* loc)
 
 	}
 
-	auto it = find_if(blockedThreads.begin(), blockedThreads.end(), 
+	auto it = find_if(blockedThreads.begin(), blockedThreads.end(),
 			  [&tid](const Thread* thread)
 				{
 					return thread->tid == tid;
