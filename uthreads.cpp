@@ -16,6 +16,16 @@ using namespace std;
 #define START_TIMER() setitimer(ITIMER_VIRTUAL, &gTvQuanta, nullptr)
 #define STOP_TIMER() setitimer(ITIMER_VIRTUAL, &gTvDisable, nullptr)
 
+enum JumpType
+{
+	/*
+	 * SWITCHING should be first, to act by the spec of sigsetjmp
+	 * since sigsetjmp returns 0 on first call
+	 */ 
+	SWITCHING,
+	RETURN
+};
+
 static Thread *gCurrentThread = nullptr;
 static Thread *gThreadToTerminate = nullptr;
 static int gTotalQuantums = 0;
@@ -36,9 +46,21 @@ void switchThreads()
 {
 	// TODO Handle timer error
 	STOP_TIMER();
-	//int ret_val = sigsetjmp(gCurrentThread->env,1);
-	// TODO Save thread state
-	// TODO Check if currently returning/switching
+	int jumpType = sigsetjmp(gCurrentThread->env,1);
+	// If returning to run current thread, simply end switch method
+	if (jumpType == RETURN)
+	{
+		// Check if got here from a suiciding thread, if so destroy it
+		if (gThreadToTerminate != nullptr)
+		{
+			delete gThreadToTerminate;
+		}
+
+		// TODO Handle error timer
+		START_TIMER();
+		return;
+	}
+
 	// TODO Switch in case switching (Initiate timer at end)
 }
 
