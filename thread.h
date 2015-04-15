@@ -1,3 +1,4 @@
+#define ERROR -1
 
 struct Thread {
 	int tid;
