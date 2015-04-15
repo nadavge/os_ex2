@@ -3,9 +3,13 @@
  * Author: Nadav Geva and Daniel Danon
  */
 #include <uthreads.h>
+#include <stablePriorityQueue.h>
 #include <sys/time.h>
 #include <signal.h>
 #include <thread.h>
+#include <vector>
+
+using namespace std;
 
 #define MAIN_ID 0
 
@@ -30,7 +34,9 @@ itimerval gTvDisable = {0};
 */
 void switchThreads()
 {
-	// TODO Stop timer
+	// TODO Handle timer error
+	STOP_TIMER();
+	//int ret_val = sigsetjmp(gCurrentThread->env,1);
 	// TODO Save thread state
 	// TODO Check if currently returning/switching
 	// TODO Switch in case switching (Initiate timer at end)
