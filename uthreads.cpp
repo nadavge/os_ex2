@@ -13,7 +13,7 @@ vector <Thread*> blockedThreads;
 StablePriorityQueue priorityQueue;
 
 static Thread* retainedThread = nullptr;
-static Location changeMainThread = 0;
+static Location changeMainThread = NOT_FOUND;
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
 {
