@@ -123,6 +123,9 @@ void switchThreads(SwitchAction action)
 		goto error;
 	}
 
+	++gTotalQuantums;
+	++gCurrentThread->quantums;
+
 	jumpType = sigsetjmp(gCurrentThread->env,1);
 	// If returning to run current thread, simply end switch method
 	if (jumpType == RETURN)
