@@ -7,3 +7,4 @@ struct Thread {
 	int quantums;
 	char stack[STACK_SIZE];
 };
+

@@ -12,6 +12,8 @@ static bool threadIdsInUse[MAX_THREAD_NUM] = {false};
 vector <Thread*> blockedThreads;
 StablePriorityQueue priorityQueue;
 
+static Thread* retainedThread = nullptr;
+static Location changeMainThread = 0;
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
 {
@@ -27,8 +29,33 @@ int uthread_spawn(void (*f)(void), Priority pr)
 /* Terminate a thread */
 int uthread_terminate(int tid)
 {
-
+	if(tid == 0)
+	{
+		exit(0);
+	}
+	if(tid < 0)
+	{
+		return ERROR;
+	}
+	Thread* thread = getThreadById(tid, loc);
+	if(thread == nullptr)
+	{
+		return ERROR;
+	}
 	threadIdsInUse[tid] = false;
+	switch(*loc)
+	{
+	case BLOCKED:
+		blockedThreads.removeThread(thread);
+		break;
+	case QUEUE:
+		priorityQueue.removeThread(thread);
+		break;
+	case ACTIVE:
+		// TODO handle thread active
+		break;
+
+	}
 }
 
 /* Suspend a thread */
@@ -48,12 +75,17 @@ int uthread_suspend(int tid)
 	switch(*loc)
 	{
 	case BLOCKED:
-		return 1;
 		break;
 	case QUEUE:
-		priorityQueue.
+		priorityQueue.removeThread(thread);
+		blockedThread.insert(thread);
+		break;
+	case ACTIVE:
+		// TODO handle thread active
+		break;
 
 	}
+	return 0;
 }
 
 /* Resume a thread */
