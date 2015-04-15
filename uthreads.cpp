@@ -5,11 +5,11 @@
 
 //================================INCLUDES=============================
 
-#include <uthreads.h>
-#include <stablePriorityQueue.h>
+#include "uthreads.h"
+#include "stablePriorityQueue.h"
 #include <sys/time.h>
 #include <signal.h>
-#include <thread.h>
+#include "thread.h"
 #include <vector>
 #include <algorithm>
 
@@ -135,38 +135,69 @@ void timerHandler(int sig)
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
 {
+	blockSignals();
 	gTvQuanta.it_value.tv_usec = quantum_usecs;
 	// TODO Add to running structure
 	gCurrentThread = new Thread(MAIN_ID, ORANGE);
+	threadIdsInUse[0] = true;
 	signal(SIGVTALRM, timerHandler);
 	START_TIMER();
+	unBlockSignals();
 }
 
 /* Create a new thread whose entry point is f */
 int uthread_spawn(void (*f)(void), Priority pr)
 {
 	address_t sp, pc;
-
+	blockSignals()
 	Thread* thread = new Thread(getMinUnusedThreadId(), pr);
+	threadIdsInUse[thread->tid] = true;
 	sp = (address_t) thread->stack + STACK_SIZE - sizeof(address_t);
 	pc = (address_t) f;
 	sigsetjmp(thread->env, 1);
 	(thread->env->__jmpbuf)[JB_SP] = translate_address(sp);
 	(thread->env->__jmpbuf)[JB_PC] = translate_address(pc);
 	sigemptyset(&(thread->env)->__saved_mask);
+	unBlockSignals();
 	return thread->tid;
 
 }
 
+int blockSignals()
+{
+	sigset_t signal_set;
+	sigemptyset(&signal_set);
+	sigaddset (&mask, SIGINT);
+	if (sigprocmask(SIG_BLOCK, &mask, NULL) < 0) {
+		return -1;
+	}
+
+	return 0;
+}
+int unBlockSignals()
+{
+	sigset_t signal_set;
+	sigemptyset(&signal_set);
+	sigaddset (&mask, SIGINT);
+	if (sigprocmask(SIG_UNBLOCK, &mask, NULL) < 0) {
+		return -1;
+	}
+
+	return 0;
+}
+
+
 /* Terminate a thread */
 int uthread_terminate(int tid)
 {
+	blockSignals();
 	if(tid == 0)
 	{
 		exit(0);
 	}
 	if(tid < 0)
 	{
+		unBlockSignals();
 		return ERROR;
 	}
 	Location* loc = nullptr;
@@ -174,37 +205,41 @@ int uthread_terminate(int tid)
 	Thread* thread = getThreadById(tid, loc);
 	if(thread == nullptr)
 	{
+		unBlockSignals();
 		return ERROR;
 	}
 	threadIdsInUse[tid] = false;
 	switch(*loc)
 	{
 	case BLOCKED:
-		//TODO change to vector remove
-		blockedThreads.removeThread(thread);
+		removeFromBlocked(thread);
 		break;
 	case QUEUE:
 		priorityQueue.removeThread(thread);
 		break;
 	case ACTIVE:
-		// TODO handle thread active
+		switchThreads(TERMINATE);
 		break;
-
 	}
+	unBlockSignals();
+	return 0;
 }
 
 /* Suspend a thread */
 int uthread_suspend(int tid)
 {
+	blockSignals();
 	Location* loc = nullptr;
 	Thread* thread = nullptr;
 	if(tid <= 0)
 	{
+		unBlockSignals();
 		return ERROR;
 	}
 	thread = getThreadById(tid, loc);
 	if(thread == nullptr)
 	{
+		unBlockSignals();
 		return ERROR;
 	}
 	switch(*loc)
@@ -216,22 +251,36 @@ int uthread_suspend(int tid)
 		blockedThreads.push_back(thread);
 		break;
 	case ACTIVE:
-		// TODO handle thread active
+		switchThreads(SUSPEND);
 		break;
 
 	}
+	unBlockSignals();
 	return 0;
 }
 
 /* Resume a thread */
 int uthread_resume(int tid)
 {
+	blockSignals();
 	Location* loc = nullptr;
 	Thread* thread = getThreadById(tid, loc);
 	if (thread == nullptr)
 	{
+		unBlockSignals();
 		return -1;
 	}
+	switch(*loc)
+	{
+	case BLOCKED:
+		removeFromBlocked(thread);
+		priorityQueue.addThread(thread);
+	case QUEUE:
+	case ACTIVE:
+		break;
+	}
+	unBlockSignals();
+	return 1;
 }
 
 
@@ -252,13 +301,16 @@ int uthread_get_total_quantums()
 /* Get the number of thread quantums */
 int uthread_get_quantums(int tid)
 {
+	blockSignals();
 	Location* loc = nullptr;
 
 	Thread* thread = getThreadById(tid, loc);
 	if (thread == nullptr)
 	{
+		unBlockSignals();
 		return -1;
 	}
+	unBlockSignals();
 	return thread->quantums;
 }
 
@@ -269,10 +321,17 @@ int getMinUnusedThreadId()
 	{
 		if(! threadIdsInUse[i])
 		{
+			unBlockSignals();
 			return i;
 		}
 	}
 	return -1;
+}
+
+void removeFromBlocked(Thread* thread)
+{
+	// Erase and remove idiom
+    blockedThreads.erase(std::remove(blockedThreads.begin(), blockedThreads.end(), thread), blockedThreads.end());
 }
 
 Thread* getThreadById(int tid, Location* loc)
