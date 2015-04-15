@@ -117,14 +117,30 @@ void switchThreads(SwitchAction action=DEF_SWITCH)
 		if (gThreadToTerminate != nullptr)
 		{
 			delete gThreadToTerminate;
+			gThreadToTerminate = nullptr;
 		}
 
-		// TODO Handle error timer
+		// TODO Handle error timer and change its place
 		START_TIMER();
 		return;
 	}
 
-	// TODO Switch in case switching (Initiate timer at end)
+	// If currently switching a thread
+	if (action == TERMINATE)
+	{
+		// TODO Implement termination
+	}
+	else if (action == SUSPEND)
+	{
+		// TODO implement suspension
+	}
+	else
+	{
+		// TODO implement default switching
+	}
+
+	// TODO Pull the next thread (first pull, if no next thread don't switch)
+	// TODO Perform a jump
 }
 
 void timerHandler(int sig)
