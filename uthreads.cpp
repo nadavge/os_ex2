@@ -31,14 +31,15 @@ static StablePriorityQueue priorityQueue;
 itimerval gTvQuanta = {{0}};
 // A timer interval for disabling the timer
 const itimerval gTvDisable = {{0}};
+sigset_t signal_set = {0};
 
 //================================DECLARATIONS=========================
 
 Thread* getThreadById(int tid, Location& loc);
 int getMinUnusedThreadId();
 void switchThreads(SwitchAction action=DEF_SWITCH);
-void blockSignals();
-void unBlockSignals();
+inline void blockSignals();
+inline void unBlockSignals();
 void removeFromBlocked(Thread* thread);
 void releaseThreads();
 
@@ -125,6 +126,10 @@ int uthread_init(int quantum_usecs)
 		return ERROR;
 	}
 
+	// Set the signal blocking object
+	sigemptyset(&signal_set);
+	sigaddset (&signal_set, SIGINT);
+	
 	if (quantum_usecs <= 0)
 	{
 		HANDLE_LIBRARY_ERROR(TIMER_ERROR);
@@ -174,11 +179,8 @@ int uthread_spawn(void (*f)(void), Priority pr)
 /**
 * @brief Block the incoming processor signals
 */
-void blockSignals()
+inline void blockSignals()
 {
-	sigset_t signal_set;
-	sigemptyset(&signal_set);
-	sigaddset (&signal_set, SIGINT);
 	if (sigprocmask(SIG_BLOCK, &signal_set, NULL) < 0) {
 		HANDLE_SYSTEM_ERROR(SIGNAL_ERROR);
 	}
@@ -187,11 +189,8 @@ void blockSignals()
 /**
 * @brief Unblock the incoming process signals
 */
-void unBlockSignals()
+inline void unBlockSignals()
 {
-	sigset_t signal_set;
-	sigemptyset(&signal_set);
-	sigaddset (&signal_set, SIGINT);
 	if (sigprocmask(SIG_UNBLOCK, &signal_set, NULL) < 0) {
 		HANDLE_SYSTEM_ERROR(SIGNAL_ERROR);
 	}
