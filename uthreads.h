@@ -19,7 +19,7 @@ int uthread_init(int quantum_usecs);
 int uthread_spawn(void (*f)(void), Priority pr);
 
 /* Terminate a thread */
-int uthread_terminate(int tid); 
+int uthread_terminate(int tid);
 
 /* Suspend a thread */
 int uthread_suspend(int tid);

@@ -37,7 +37,7 @@ sigset_t signal_set = {{0}};
 
 Thread* getThreadById(int tid, Location& loc);
 int getMinUnusedThreadId();
-void switchThreads(SwitchAction action=DEF_SWITCH);
+void switchThreads(SwitchAction action = DEF_SWITCH);
 inline void blockSignals();
 inline void unBlockSignals();
 void removeFromBlocked(Thread* thread);
@@ -129,15 +129,15 @@ int uthread_init(int quantum_usecs)
 	// Set the signal blocking object
 	sigemptyset(&signal_set);
 	sigaddset (&signal_set, SIGINT);
-	
+
 	if (quantum_usecs <= 0)
 	{
 		HANDLE_LIBRARY_ERROR(TIMER_ERROR);
 		return ERROR;
 	}
 
-	gTvQuanta.it_value.tv_sec = quantum_usecs/MICRO;
-	gTvQuanta.it_value.tv_usec = quantum_usecs%MICRO;
+	gTvQuanta.it_value.tv_sec = quantum_usecs / MICRO;
+	gTvQuanta.it_value.tv_usec = quantum_usecs % MICRO;
 	gCurrentThread = new Thread(MAIN_ID, ORANGE);
 	gTotalQuantums = 1;
 	threadIdsInUse[MAIN_ID] = true;
@@ -147,7 +147,7 @@ int uthread_init(int quantum_usecs)
 		HANDLE_SYSTEM_ERROR(TIMER_ERROR);
 	}
 
-	return 0;	
+	return 0;
 }
 
 /* Create a new thread whose entry point is f */
@@ -345,7 +345,7 @@ int uthread_get_quantums(int tid)
 		// Technically since this quanta has already started it still counts
 		++threadQuantums;
 	}
-	
+
 	unBlockSignals();
 	return threadQuantums;
 }
@@ -379,7 +379,8 @@ int getMinUnusedThreadId()
 void removeFromBlocked(Thread* thread)
 {
 	// Erase and remove idiom
-    blockedThreads.erase(std::remove(blockedThreads.begin(), blockedThreads.end(), thread), blockedThreads.end());
+	blockedThreads.erase(std::remove(blockedThreads.begin(), blockedThreads.end(), thread),
+						 blockedThreads.end());
 }
 
 /**
@@ -411,10 +412,10 @@ Thread* getThreadById(int tid, Location& loc)
 	}
 
 	auto it = find_if(blockedThreads.begin(), blockedThreads.end(),
-	          [&tid](const Thread* thread)
-				{
-					return thread->tid == tid;
-				});
+					  [&tid](const Thread * thread)
+	{
+		return thread->tid == tid;
+	});
 	if (it != blockedThreads.end())
 	{
 		loc = BLOCKED;
