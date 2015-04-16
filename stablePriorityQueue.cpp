@@ -18,7 +18,6 @@ StablePriorityQueue::~StablePriorityQueue()
 
 void StablePriorityQueue::addThread(Thread *thread)
 {
-	// TODO Maybe not use push_back
     _threadQueues[thread->priority].push_back(thread);
 }
 
@@ -50,9 +49,26 @@ Thread* StablePriorityQueue::getTopThread()
     for (int pri = RED; pri <= GREEN; ++pri)
     {
 		vector<Thread*>& vec = _threadQueues[pri];
-        if (vec.size() > 0)
+        if (! vec.empty())
 		{
 			return vec.front();
+		}
+    }
+    return nullptr;
+}
+
+
+Thread* StablePriorityQueue::popBack()
+{
+	Thread* ret = nullptr;
+    for (int pri = GREEN; pri >= RED; --pri)
+    {
+		vector<Thread*>& vec = _threadQueues[pri];
+        if (! vec.empty())
+		{
+			ret = vec.back();
+			vec.pop_back();
+			return ret;
 		}
     }
     return nullptr;

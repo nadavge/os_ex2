@@ -36,6 +36,13 @@ class StablePriorityQueue
 		**/
 		Thread* getTopThread();
 
+		/**
+		* @brief Pop the last thread from the queue
+		*
+		* @return the last thread from the queue. If empty, return nullptr
+		*/
+		Thread* popBack();
+
 
 		/**
 		* @brief destructor - frees everything that's needed

@@ -13,85 +13,9 @@
 #include <vector>
 #include <algorithm>
 #include <iostream>
+#include "utils.h"
 
 using namespace std;
-
-//================================MACROS===============================
-// @TODO change back to cerr
-#define HANDLE_SYSTEM_ERROR(MSG) cout << SYSTEM_ERROR MSG << endl; exit(1)
-#define HANDLE_LIBRARY_ERROR(MSG) cout << LIBRARY_ERROR MSG <<endl;
-#define START_TIMER() setitimer(ITIMER_VIRTUAL, &gTvQuanta, nullptr)
-#define STOP_TIMER() setitimer(ITIMER_VIRTUAL, &gTvDisable, nullptr)
-
-//================================DEFINITIONS==========================
-
-#define MAIN_ID 0
-#define ERROR -1
-#define MICRO 1000000
-
-#define SYSTEM_ERROR "system error: "
-#define LIBRARY_ERROR "thread library error: "
-#define TIMER_ERROR "Setting timer failed"
-#define TOO_MANY_THREADS_ERROR "Too many threads"
-#define ACCESS_NULL_THREAD_ERROR "Accessing non-existent thread"
-#define SIGNAL_ERROR "Error in handling signals"
-
-enum JumpType
-{
-	/*
-	 * SWITCHING should be first, to act by the spec of sigsetjmp
-	 * since sigsetjmp returns 0 on first call
-	 */
-	SWITCHING,
-	RETURN
-};
-
-enum SwitchAction
-{
-	DEF_SWITCH,
-	SUSPEND,
-	TERMINATE
-};
-
-#ifdef __x86_64__
-/* code for 64 bit Intel arch */
-
-typedef unsigned long address_t;
-#define JB_SP 6
-#define JB_PC 7
-
-/* A translation is required when using an address of a variable.
-   Use this as a black box in your code. */
-address_t translate_address(address_t addr)
-{
-    address_t ret;
-    asm volatile("xor    %%fs:0x30,%0\n"
-		"rol    $0x11,%0\n"
-                 : "=g" (ret)
-                 : "0" (addr));
-    return ret;
-}
-
-#else
-/* code for 32 bit Intel arch */
-
-typedef unsigned int address_t;
-#define JB_SP 4
-#define JB_PC 5
-
-/* A translation is required when using an address of a variable.
-   Use this as a black box in your code. */
-address_t translate_address(address_t addr)
-{
-    address_t ret;
-    asm volatile("xor    %%gs:0x18,%0\n"
-		"rol    $0x9,%0\n"
-                 : "=g" (ret)
-                 : "0" (addr));
-    return ret;
-}
-
-#endif
 
 //================================GLOBALS==============================
 
@@ -104,18 +28,19 @@ static vector <Thread*> blockedThreads;
 static StablePriorityQueue priorityQueue;
 
 // A timer interval for a quanta
-itimerval gTvQuanta = {0};
+itimerval gTvQuanta = {{0}};
 // A timer interval for disabling the timer
-const itimerval gTvDisable = {0};
+const itimerval gTvDisable = {{0}};
 
 //================================DECLARATIONS=========================
 
 Thread* getThreadById(int tid, Location& loc);
 int getMinUnusedThreadId();
 void switchThreads(SwitchAction action=DEF_SWITCH);
-int blockSignals();
-int unBlockSignals();
+void blockSignals();
+void unBlockSignals();
 void removeFromBlocked(Thread* thread);
+void releaseThreads();
 
 //================================IMPLEMENTATION=======================
 
@@ -131,6 +56,7 @@ void switchThreads(SwitchAction action)
 	{
 		goto error;
 	}
+
 	++gTotalQuantums;
 	++gCurrentThread->quantums;
 
@@ -148,24 +74,22 @@ void switchThreads(SwitchAction action)
 		return;
 	}
 
-	// TODO implement pop
 	newThread = priorityQueue.getTopThread();
 	// If there exists a thread to switch to
 	if (newThread != nullptr)
 	{
-		// TODO Maybe implement as queue to be more efficient
 		priorityQueue.removeThread(newThread);
-		if (action == TERMINATE)
+		switch (action)
 		{
+		case TERMINATE:
 			gThreadToTerminate = gCurrentThread;
-		}
-		else if (action == DEF_SWITCH)
-		{
+			break;
+		case DEF_SWITCH:
 			priorityQueue.addThread(gCurrentThread);
-		}
-		else if (action == SUSPEND)
-		{
+			break;
+		case SUSPEND:
 			blockedThreads.push_back(gCurrentThread);
+			break;
 		}
 
 		gCurrentThread = newThread;
@@ -190,6 +114,11 @@ error:
 	HANDLE_SYSTEM_ERROR(TIMER_ERROR);
 }
 
+/**
+* @brief A callback function from a clock interrupt
+*
+* @param sig clock signal
+*/
 void timerHandler(int sig)
 {
 	switchThreads();
@@ -198,7 +127,13 @@ void timerHandler(int sig)
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
 {
-	// TODO add check for one time init
+	// Check if init was already called
+	if (threadIdsInUse[MAIN_ID])
+	{
+		HANDLE_LIBRARY_ERROR(INVALID_CALL_ERROR);
+		return ERROR;
+	}
+
 	if (quantum_usecs <= 0)
 	{
 		HANDLE_LIBRARY_ERROR(TIMER_ERROR);
@@ -209,13 +144,14 @@ int uthread_init(int quantum_usecs)
 	gTvQuanta.it_value.tv_usec = quantum_usecs%MICRO;
 	gCurrentThread = new Thread(MAIN_ID, ORANGE);
 	gTotalQuantums = 1;
-	threadIdsInUse[0] = true;
+	threadIdsInUse[MAIN_ID] = true;
 	signal(SIGVTALRM, timerHandler);
 	if (START_TIMER() == ERROR)
 	{
-		cout << errno << endl;
 		HANDLE_SYSTEM_ERROR(TIMER_ERROR);
 	}
+
+	return 0;	
 }
 
 /* Create a new thread whose entry point is f */
@@ -244,7 +180,10 @@ int uthread_spawn(void (*f)(void), Priority pr)
 
 }
 
-int blockSignals()
+/**
+* @brief Block the incoming processor signals
+*/
+void blockSignals()
 {
 	sigset_t signal_set;
 	sigemptyset(&signal_set);
@@ -252,10 +191,12 @@ int blockSignals()
 	if (sigprocmask(SIG_BLOCK, &signal_set, NULL) < 0) {
 		HANDLE_SYSTEM_ERROR(SIGNAL_ERROR);
 	}
-
-	return 0;
 }
-int unBlockSignals()
+
+/**
+* @brief Unblock the incoming process signals
+*/
+void unBlockSignals()
 {
 	sigset_t signal_set;
 	sigemptyset(&signal_set);
@@ -263,18 +204,17 @@ int unBlockSignals()
 	if (sigprocmask(SIG_UNBLOCK, &signal_set, NULL) < 0) {
 		HANDLE_SYSTEM_ERROR(SIGNAL_ERROR);
 	}
-
-	return 0;
 }
 
 
 /* Terminate a thread */
-// TODO Add on suicide check if someone's waiting for suicide and euthanize him
 int uthread_terminate(int tid)
 {
+	Thread* thread = nullptr;
 	blockSignals();
-	if(tid == 0)
+	if(tid == MAIN_ID)
 	{
+		releaseThreads();
 		exit(0);
 	}
 	if(tid < 0)
@@ -285,7 +225,7 @@ int uthread_terminate(int tid)
 	}
 	Location loc = NOT_FOUND;
 
-	Thread* thread = getThreadById(tid, loc);
+	thread = getThreadById(tid, loc);
 	if(thread == nullptr)
 	{
 		HANDLE_LIBRARY_ERROR(ACCESS_NULL_THREAD_ERROR);
@@ -297,12 +237,22 @@ int uthread_terminate(int tid)
 	{
 	case BLOCKED:
 		removeFromBlocked(thread);
+		delete thread;
 		break;
 	case QUEUE:
 		priorityQueue.removeThread(thread);
+		delete thread;
 		break;
 	case ACTIVE:
+		if (gThreadToTerminate != nullptr)
+		{
+			delete gThreadToTerminate;
+			gThreadToTerminate = nullptr;
+		}
 		switchThreads(TERMINATE);
+		break;
+	// Put in order to avoid compilation warnings
+	default:
 		break;
 	}
 	unBlockSignals();
@@ -339,6 +289,9 @@ int uthread_suspend(int tid)
 	case ACTIVE:
 		switchThreads(SUSPEND);
 		break;
+	// Put to avoid compilation warning
+	default:
+		break;
 	}
 	unBlockSignals();
 	return 0;
@@ -359,8 +312,7 @@ int uthread_resume(int tid)
 	case BLOCKED:
 		removeFromBlocked(thread);
 		priorityQueue.addThread(thread);
-	case QUEUE:
-	case ACTIVE:
+	default:
 		break;
 	}
 	unBlockSignals();
@@ -399,16 +351,22 @@ int uthread_get_quantums(int tid)
 	if (thread == gCurrentThread)
 	{
 		// Technically since this quanta has already started it still counts
-		threadQuantums += 1;
+		++threadQuantums;
 	}
 	
 	unBlockSignals();
 	return threadQuantums;
 }
 
+/**
+* @brief Get the minimum unused thread id available
+*
+* @return ^^
+*/
 int getMinUnusedThreadId()
 {
 	int i = 0;
+
 	for(i = 0; i < MAX_THREAD_NUM; i++)
 	{
 		if(! threadIdsInUse[i])
@@ -417,15 +375,29 @@ int getMinUnusedThreadId()
 			return i;
 		}
 	}
+
 	return ERROR;
 }
 
+/**
+* @brief Remove thread from the blocked state
+*
+* @param thread the thread
+*/
 void removeFromBlocked(Thread* thread)
 {
 	// Erase and remove idiom
     blockedThreads.erase(std::remove(blockedThreads.begin(), blockedThreads.end(), thread), blockedThreads.end());
 }
 
+/**
+* @brief Get the thread by its ID
+*
+* @param tid the ID
+* @param loc the thread location in the state graph (by reference)
+*
+* @return the thread
+*/
 Thread* getThreadById(int tid, Location& loc)
 {
 	Thread* thread = nullptr;
@@ -447,7 +419,7 @@ Thread* getThreadById(int tid, Location& loc)
 	}
 
 	auto it = find_if(blockedThreads.begin(), blockedThreads.end(),
-			  [&tid](const Thread* thread)
+	          [&tid](const Thread* thread)
 				{
 					return thread->tid == tid;
 				});
@@ -457,4 +429,18 @@ Thread* getThreadById(int tid, Location& loc)
 		return *it;
 	}
 	return nullptr;
+}
+
+void releaseThreads()
+{
+	Thread* thread;
+	while ( (thread = priorityQueue.popBack()) != nullptr)
+	{
+		delete thread;
+	}
+
+	for (auto thread : blockedThreads)
+	{
+		delete thread;
+	}
 }

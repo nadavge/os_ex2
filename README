@@ -1,0 +1,37 @@
+nadavg, ddanon
+Nadav Geva (206338865), Daniel Danon (313364861)
+Ex: 2
+
+FILES:
+Makefile - Does all the magic
+README - This file :)
+stablePriorityQueue.cpp - The class that handles the stable priority queue
+stablePriorityQueue.h - Header for the priority queue
+thread.h - Some structs relevant to the thread
+uthreads.cpp - The code for the threading file
+uthreads.h - The header file as given to us
+utils.h - General definitions, macros and such for the uthreads.cpp
+
+
+REMARKS:
+In task 3 we considered some options on how to handle returning error code in case the 
+time-getting function fails.
+We eventually did it as a MACRO to avoid code repetition, even though we know we could've just "copy-pasted" the
+code on each function. In our opinion this seemed less elegant, so we picked the MACRO.
+
+ANSWERS:
+
+=================
+Question 1
+=================
+On one hand, RR (Round Robin) works on average really good for jobs that are
+	short. On the other hand, if we are looking at high-intensity long jobs,
+	Then we'll just get alot of CPU peaks (if our jobs require more than one quantum).
+PQ (Priority Queue) solves some of this problem by granting processes with higher priority
+	(more important ones) all the processing time they need. this is good, but it may lead
+	to starvation - low priority threads may wait indefinitely and never get executed.
+=================
+Question 2
+=================
+When we want to read a file and it's blocked since other program is reading or writing
+	from it, we'll be blocked until we'll be able to read it.
