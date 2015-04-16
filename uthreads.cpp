@@ -94,15 +94,6 @@ void switchThreads(SwitchAction action)
 
 		gCurrentThread = newThread;
 	}
-	else
-	{
-		// In that case we want to stay the active thread, unless we terminated ourselves
-		if (action == TERMINATE)
-		{
-			// TODO find a way to handle a case of no available replacement on suicide
-			// Maybe take control over the main thread with editing pc to be the kill process
-		}
-	}
 
 	if (START_TIMER() == ERROR)
 	{
