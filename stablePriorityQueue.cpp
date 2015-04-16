@@ -11,6 +11,11 @@ StablePriorityQueue::StablePriorityQueue()
 
 }
 
+StablePriorityQueue::~StablePriorityQueue()
+{
+
+}
+
 void StablePriorityQueue::addThread(Thread *thread)
 {
 	// TODO Maybe not use push_back

@@ -27,7 +27,7 @@ using namespace std;
 #define START_TIMER() setitimer(ITIMER_VIRTUAL, &gTvQuanta, nullptr)
 #define STOP_TIMER() setitimer(ITIMER_VIRTUAL, &gTvDisable, nullptr)
 
-#define DEBUG(msg) cout << "\t\t" << msg << endl
+#define DEBUG(msg) 0//cout << "\t\t" << msg << endl
 
 enum JumpType
 {
@@ -124,15 +124,15 @@ void switchThreads(SwitchAction action)
 	{
 		goto error;
 	}
-	DEBUG("Starting");
+	DEBUG("Starting switchThreads - action: " + to_string(action));
 	++gTotalQuantums;
 	++gCurrentThread->quantums;
 
-	jumpType = sigsetjmp(gCurrentThread->env,1);
+	jumpType = sigsetjmp(gCurrentThread->env, 1);
 	// If returning to run current thread, simply end switch method
 	if (jumpType == RETURN)
 	{
-		DEBUG("Entered RETURN");
+		DEBUG("Entered RETURN jump type");
 		// Check if got here from a suiciding thread, if so destroy it
 		if (gThreadToTerminate != nullptr)
 		{
@@ -149,7 +149,7 @@ void switchThreads(SwitchAction action)
 	DEBUG("Getting top thread");
 	if (newThread != nullptr)
 	{
-		DEBUG("Found new thread");
+		DEBUG("Found new thread - tid: " + to_string(newThread->tid));
 		// TODO Maybe implement as queue to be more efficient
 		priorityQueue.removeThread(newThread);
 		if (action == TERMINATE)
@@ -185,7 +185,7 @@ void switchThreads(SwitchAction action)
 		DEBUG("Goto ERROR");
 		goto error;
 	}
-	DEBUG("Finished, jumping");
+	DEBUG("Finished, jumping - Currently have quantums: " + to_string(gCurrentThread->quantums));
 	siglongjmp(gCurrentThread->env, RETURN);
 
 error:
@@ -202,8 +202,8 @@ void timerHandler(int sig)
 int uthread_init(int quantum_usecs)
 {
 	gTvQuanta.it_value.tv_usec = quantum_usecs;
-	// TODO Add to running structure
 	gCurrentThread = new Thread(MAIN_ID, ORANGE);
+	gTotalQuantums = 1;
 	threadIdsInUse[0] = true;
 	signal(SIGVTALRM, timerHandler);
 	if (START_TIMER() == ERROR)
@@ -257,6 +257,7 @@ int unBlockSignals()
 
 
 /* Terminate a thread */
+// TODO Add on suicide check if someone's waiting for suicide and euthanize him
 int uthread_terminate(int tid)
 {
 	blockSignals();
@@ -376,17 +377,26 @@ int uthread_get_total_quantums()
 /* Get the number of thread quantums */
 int uthread_get_quantums(int tid)
 {
+	int threadQuantums = 0;
 	blockSignals();
 	Location loc = NOT_FOUND;
-
+	//DEBUG("Get quantums calling getThreadById, tid: " + to_string(tid));
 	Thread* thread = getThreadById(tid, loc);
+	//DEBUG("Get quantums is back");
 	if (thread == nullptr)
 	{
 		unBlockSignals();
 		return -1;
 	}
+	threadQuantums = thread->quantums;
+	if (thread == gCurrentThread)
+	{
+		// Technically since this quanta has already started it still counts
+		threadQuantums += 1;
+	}
+	
 	unBlockSignals();
-	return thread->quantums;
+	return threadQuantums;
 }
 
 int getMinUnusedThreadId()
@@ -412,7 +422,6 @@ void removeFromBlocked(Thread* thread)
 Thread* getThreadById(int tid, Location& loc)
 {
 	Thread* thread = nullptr;
-	DEBUG("Starting getThreadById");
 	if(gCurrentThread->tid == tid)
 	{
 		loc = ACTIVE;
@@ -421,6 +430,7 @@ Thread* getThreadById(int tid, Location& loc)
 	thread = priorityQueue.getThreadById(tid);
 	if (thread != nullptr)
 	{
+		DEBUG("In queue");
 		loc = QUEUE;
 		return thread;
 
@@ -433,8 +443,10 @@ Thread* getThreadById(int tid, Location& loc)
 				});
 	if (it != blockedThreads.end())
 	{
+		DEBUG("In blocked");
 		loc = BLOCKED;
 		return *it;
 	}
+	DEBUG("getThreadById returns nullptr");
 	return nullptr;
 }
