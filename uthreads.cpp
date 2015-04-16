@@ -204,6 +204,8 @@ int uthread_terminate(int tid)
 	blockSignals();
 	if(tid == MAIN_ID)
 	{
+		// Delete the currently running thread (Main)
+		delete gCurrentThread;
 		releaseThreads();
 		exit(0);
 	}
@@ -335,7 +337,7 @@ int uthread_get_quantums(int tid)
 	{
 		HANDLE_LIBRARY_ERROR(ACCESS_NULL_THREAD_ERROR);
 		unBlockSignals();
-		return -1;
+		return ERROR;
 	}
 	threadQuantums = thread->quantums;
 	if (thread == gCurrentThread)
@@ -421,10 +423,14 @@ Thread* getThreadById(int tid, Location& loc)
 	return nullptr;
 }
 
+/**
+* @brief Release all the threads used in the process except currently running
+*/
 void releaseThreads()
 {
-	Thread* thread;
-	while ( (thread = priorityQueue.popBack()) != nullptr)
+	Thread* thread = nullptr;
+
+	while ((thread = priorityQueue.popBack()) != nullptr)
 	{
 		delete thread;
 	}
