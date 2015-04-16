@@ -8,7 +8,8 @@
 */
 struct Thread {
 	// Constructor for thread
-	Thread(int id, Priority pri) : tid(id), priority(pri), quantums(0) {}
+	// @TODO Possibly change quantums to zero and check at the get_quantums function for 0
+	Thread(int id, Priority pri) : tid(id), priority(pri), quantums(1) {}
 
 	// The threads ID
 	int tid;
