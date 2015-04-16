@@ -31,7 +31,7 @@ static StablePriorityQueue priorityQueue;
 itimerval gTvQuanta = {{0}};
 // A timer interval for disabling the timer
 const itimerval gTvDisable = {{0}};
-sigset_t signal_set = {0};
+sigset_t signal_set = {{0}};
 
 //================================DECLARATIONS=========================
 
