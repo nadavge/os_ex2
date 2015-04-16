@@ -204,6 +204,8 @@ int uthread_terminate(int tid)
 	blockSignals();
 	if(tid == MAIN_ID)
 	{
+		// Delete the currently running thread (Main)
+		delete gCurrentThread;
 		releaseThreads();
 		exit(0);
 	}
