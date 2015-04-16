@@ -23,9 +23,6 @@ using namespace std;
 #define START_TIMER() setitimer(ITIMER_VIRTUAL, &gTvQuanta, nullptr)
 #define STOP_TIMER() setitimer(ITIMER_VIRTUAL, &gTvDisable, nullptr)
 
-// TODO Remove debug
-#define DEBUG(msg) 0//cout << "\t\t" << msg << endl
-
 //================================DEFINITIONS==========================
 
 #define MAIN_ID 0
@@ -134,7 +131,6 @@ void switchThreads(SwitchAction action)
 	{
 		goto error;
 	}
-	DEBUG("Starting switchThreads - action: " + to_string(action));
 	++gTotalQuantums;
 	++gCurrentThread->quantums;
 
@@ -142,7 +138,6 @@ void switchThreads(SwitchAction action)
 	// If returning to run current thread, simply end switch method
 	if (jumpType == RETURN)
 	{
-		DEBUG("Entered RETURN jump type");
 		// Check if got here from a suiciding thread, if so destroy it
 		if (gThreadToTerminate != nullptr)
 		{
@@ -156,10 +151,8 @@ void switchThreads(SwitchAction action)
 	// TODO implement pop
 	newThread = priorityQueue.getTopThread();
 	// If there exists a thread to switch to
-	DEBUG("Getting top thread");
 	if (newThread != nullptr)
 	{
-		DEBUG("Found new thread - tid: " + to_string(newThread->tid));
 		// TODO Maybe implement as queue to be more efficient
 		priorityQueue.removeThread(newThread);
 		if (action == TERMINATE)
@@ -168,12 +161,10 @@ void switchThreads(SwitchAction action)
 		}
 		else if (action == DEF_SWITCH)
 		{
-			DEBUG("Default action");
 			priorityQueue.addThread(gCurrentThread);
 		}
 		else if (action == SUSPEND)
 		{
-			DEBUG("Suspend action");
 			blockedThreads.push_back(gCurrentThread);
 		}
 
@@ -181,7 +172,6 @@ void switchThreads(SwitchAction action)
 	}
 	else
 	{
-		DEBUG("Its nullptr");
 		// In that case we want to stay the active thread, unless we terminated ourselves
 		if (action == TERMINATE)
 		{
@@ -192,14 +182,11 @@ void switchThreads(SwitchAction action)
 
 	if (START_TIMER() == ERROR)
 	{
-		DEBUG("Goto ERROR");
 		goto error;
 	}
-	DEBUG("Finished, jumping - Currently have quantums: " + to_string(gCurrentThread->quantums));
 	siglongjmp(gCurrentThread->env, RETURN);
 
 error:
-	DEBUG("################# ERROR ####################");
 	HANDLE_SYSTEM_ERROR(TIMER_ERROR);
 }
 
@@ -226,6 +213,7 @@ int uthread_init(int quantum_usecs)
 	signal(SIGVTALRM, timerHandler);
 	if (START_TIMER() == ERROR)
 	{
+		cout << errno << endl;
 		HANDLE_SYSTEM_ERROR(TIMER_ERROR);
 	}
 }
@@ -325,7 +313,6 @@ int uthread_terminate(int tid)
 int uthread_suspend(int tid)
 {
 	blockSignals();
-	DEBUG("Entering suspend");
 	Location loc = NOT_FOUND;
 	Thread* thread = nullptr;
 	if(tid <= 0)
@@ -334,31 +321,25 @@ int uthread_suspend(int tid)
 		unBlockSignals();
 		return ERROR;
 	}
-	DEBUG("Getting thread by ID");
 	thread = getThreadById(tid, loc);
 	if(thread == nullptr)
 	{
 		HANDLE_LIBRARY_ERROR(ACCESS_NULL_THREAD_ERROR);
-		DEBUG("nullptr");
 		unBlockSignals();
 		return ERROR;
 	}
-	DEBUG("Not nullptr");
 	switch(loc)
 	{
 	case BLOCKED:
 		break;
 	case QUEUE:
-		DEBUG("Queue");
 		priorityQueue.removeThread(thread);
 		blockedThreads.push_back(thread);
 		break;
 	case ACTIVE:
-		DEBUG("Active");
 		switchThreads(SUSPEND);
 		break;
 	}
-	DEBUG("Finished");
 	unBlockSignals();
 	return 0;
 }
@@ -407,9 +388,7 @@ int uthread_get_quantums(int tid)
 	int threadQuantums = 0;
 	blockSignals();
 	Location loc = NOT_FOUND;
-	//DEBUG("Get quantums calling getThreadById, tid: " + to_string(tid));
 	Thread* thread = getThreadById(tid, loc);
-	//DEBUG("Get quantums is back");
 	if (thread == nullptr)
 	{
 		HANDLE_LIBRARY_ERROR(ACCESS_NULL_THREAD_ERROR);
@@ -462,7 +441,6 @@ Thread* getThreadById(int tid, Location& loc)
 	thread = priorityQueue.getThreadById(tid);
 	if (thread != nullptr)
 	{
-		DEBUG("In queue");
 		loc = QUEUE;
 		return thread;
 
@@ -475,10 +453,8 @@ Thread* getThreadById(int tid, Location& loc)
 				});
 	if (it != blockedThreads.end())
 	{
-		DEBUG("In blocked");
 		loc = BLOCKED;
 		return *it;
 	}
-	DEBUG("getThreadById returns nullptr");
 	return nullptr;
 }
