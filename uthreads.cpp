@@ -16,18 +16,28 @@
 
 using namespace std;
 
+//================================MACROS===============================
+// @TODO change back to cerr
+#define HANDLE_SYSTEM_ERROR(MSG) cout << SYSTEM_ERROR MSG << endl; exit(1)
+#define HANDLE_LIBRARY_ERROR(MSG) cout << LIBRARY_ERROR MSG <<endl;
+#define START_TIMER() setitimer(ITIMER_VIRTUAL, &gTvQuanta, nullptr)
+#define STOP_TIMER() setitimer(ITIMER_VIRTUAL, &gTvDisable, nullptr)
+
+// TODO Remove debug
+#define DEBUG(msg) 0//cout << "\t\t" << msg << endl
+
 //================================DEFINITIONS==========================
 
 #define MAIN_ID 0
 #define ERROR -1
+#define MICRO 1000000
 
 #define SYSTEM_ERROR "system error: "
-#define TIMER_ERROR "Setting timer failed\n"
-
-#define START_TIMER() setitimer(ITIMER_VIRTUAL, &gTvQuanta, nullptr)
-#define STOP_TIMER() setitimer(ITIMER_VIRTUAL, &gTvDisable, nullptr)
-
-#define DEBUG(msg) 0//cout << "\t\t" << msg << endl
+#define LIBRARY_ERROR "thread library error: "
+#define TIMER_ERROR "Setting timer failed"
+#define TOO_MANY_THREADS_ERROR "Too many threads"
+#define ACCESS_NULL_THREAD_ERROR "Accessing non-existent thread"
+#define SIGNAL_ERROR "Error in handling signals"
 
 enum JumpType
 {
@@ -190,7 +200,7 @@ void switchThreads(SwitchAction action)
 
 error:
 	DEBUG("################# ERROR ####################");
-	cerr << SYSTEM_ERROR TIMER_ERROR;
+	HANDLE_SYSTEM_ERROR(TIMER_ERROR);
 }
 
 void timerHandler(int sig)
@@ -201,15 +211,22 @@ void timerHandler(int sig)
 /* Initialize the thread library */
 int uthread_init(int quantum_usecs)
 {
-	gTvQuanta.it_value.tv_usec = quantum_usecs;
+	// TODO add check for one time init
+	if (quantum_usecs <= 0)
+	{
+		HANDLE_LIBRARY_ERROR(TIMER_ERROR);
+		return ERROR;
+	}
+
+	gTvQuanta.it_value.tv_sec = quantum_usecs/MICRO;
+	gTvQuanta.it_value.tv_usec = quantum_usecs%MICRO;
 	gCurrentThread = new Thread(MAIN_ID, ORANGE);
 	gTotalQuantums = 1;
 	threadIdsInUse[0] = true;
 	signal(SIGVTALRM, timerHandler);
 	if (START_TIMER() == ERROR)
 	{
-		cerr << SYSTEM_ERROR TIMER_ERROR;
-		exit(1);
+		HANDLE_SYSTEM_ERROR(TIMER_ERROR);
 	}
 }
 
@@ -217,8 +234,15 @@ int uthread_init(int quantum_usecs)
 int uthread_spawn(void (*f)(void), Priority pr)
 {
 	address_t sp, pc;
+	int threadId = ERROR;
 	blockSignals();
-	Thread* thread = new Thread(getMinUnusedThreadId(), pr);
+	threadId = getMinUnusedThreadId();
+	if (threadId == ERROR)
+	{
+		HANDLE_LIBRARY_ERROR(TOO_MANY_THREADS_ERROR);
+		return ERROR;
+	}
+	Thread* thread = new Thread(threadId, pr);
 	threadIdsInUse[thread->tid] = true;
 	sp = (address_t) thread->stack + STACK_SIZE - sizeof(address_t);
 	pc = (address_t) f;
@@ -238,7 +262,7 @@ int blockSignals()
 	sigemptyset(&signal_set);
 	sigaddset (&signal_set, SIGINT);
 	if (sigprocmask(SIG_BLOCK, &signal_set, NULL) < 0) {
-		return -1;
+		HANDLE_SYSTEM_ERROR(SIGNAL_ERROR);
 	}
 
 	return 0;
@@ -249,7 +273,7 @@ int unBlockSignals()
 	sigemptyset(&signal_set);
 	sigaddset (&signal_set, SIGINT);
 	if (sigprocmask(SIG_UNBLOCK, &signal_set, NULL) < 0) {
-		return -1;
+		HANDLE_SYSTEM_ERROR(SIGNAL_ERROR);
 	}
 
 	return 0;
@@ -267,6 +291,7 @@ int uthread_terminate(int tid)
 	}
 	if(tid < 0)
 	{
+		HANDLE_LIBRARY_ERROR(ACCESS_NULL_THREAD_ERROR);
 		unBlockSignals();
 		return ERROR;
 	}
@@ -275,6 +300,7 @@ int uthread_terminate(int tid)
 	Thread* thread = getThreadById(tid, loc);
 	if(thread == nullptr)
 	{
+		HANDLE_LIBRARY_ERROR(ACCESS_NULL_THREAD_ERROR);
 		unBlockSignals();
 		return ERROR;
 	}
@@ -304,6 +330,7 @@ int uthread_suspend(int tid)
 	Thread* thread = nullptr;
 	if(tid <= 0)
 	{
+		HANDLE_LIBRARY_ERROR(ACCESS_NULL_THREAD_ERROR);
 		unBlockSignals();
 		return ERROR;
 	}
@@ -311,6 +338,7 @@ int uthread_suspend(int tid)
 	thread = getThreadById(tid, loc);
 	if(thread == nullptr)
 	{
+		HANDLE_LIBRARY_ERROR(ACCESS_NULL_THREAD_ERROR);
 		DEBUG("nullptr");
 		unBlockSignals();
 		return ERROR;
@@ -343,8 +371,7 @@ int uthread_resume(int tid)
 	Thread* thread = getThreadById(tid, loc);
 	if (thread == nullptr)
 	{
-		unBlockSignals();
-		return -1;
+		HANDLE_LIBRARY_ERROR(ACCESS_NULL_THREAD_ERROR);
 	}
 	switch(loc)
 	{
@@ -385,6 +412,7 @@ int uthread_get_quantums(int tid)
 	//DEBUG("Get quantums is back");
 	if (thread == nullptr)
 	{
+		HANDLE_LIBRARY_ERROR(ACCESS_NULL_THREAD_ERROR);
 		unBlockSignals();
 		return -1;
 	}
@@ -410,7 +438,7 @@ int getMinUnusedThreadId()
 			return i;
 		}
 	}
-	return -1;
+	return ERROR;
 }
 
 void removeFromBlocked(Thread* thread)
@@ -422,6 +450,10 @@ void removeFromBlocked(Thread* thread)
 Thread* getThreadById(int tid, Location& loc)
 {
 	Thread* thread = nullptr;
+	if(tid < 0)
+	{
+		return nullptr;
+	}
 	if(gCurrentThread->tid == tid)
 	{
 		loc = ACTIVE;
